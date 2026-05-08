@@ -38,13 +38,20 @@ export const useInventario = () => {
     const cargarProductos = async () => {
         try {
             setLoading(true);
-            const respuesta = await fetch(API_URL);
+            // Si usas paginación, aquí puedes agregar ?page=0&size=20
+            const respuesta = await fetch(API_URL); 
             
             if (!respuesta.ok) {
                 throw new Error("No es posible contactar el servidor");
             }
             const datos = await respuesta.json();
-            setProductos(datos);
+            
+            // LA MAGIA ESTÁ AQUÍ:
+            // Si "content" existe, es porque viene paginado de Spring Boot. 
+            // Si no, es una lista normal.
+            const listaProductos = datos.content ? datos.content : datos;
+            
+            setProductos(listaProductos);
         } catch (err: unknown) {
             const mensaje = err instanceof Error ? err.message : "Error desconocido";
             setError(mensaje);
@@ -52,7 +59,7 @@ export const useInventario = () => {
         } finally {
             setLoading(false);
         }
-    };    
+    };   
     useEffect(() => {
         cargarProductos();
     }, []);

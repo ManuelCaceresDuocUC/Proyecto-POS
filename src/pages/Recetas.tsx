@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useInventario } from '../hooks/useInventario'; 
-import { useRecetas } from '../hooks/useRecetas'; // Para listar y eliminar los vínculos existentes
+import { useRecetas } from '../hooks/useRecetas'; 
 import { useState, useMemo } from 'react';
 import Swal from 'sweetalert2';
 
@@ -14,32 +14,26 @@ interface IngredienteReceta {
 
 export const Recetas = () => {
     const { productos, cargarProductos } = useInventario(); 
-    const { recetas, eliminarReceta } = useRecetas(); // Traemos las recetas existentes para la tabla
-    
+    const { recetas, eliminarReceta } = useRecetas(); 
     const [showModalReceta, setShowModalReceta] = useState(false);
-    const [busqueda, setBusqueda] = useState(''); // Estado para la barra de búsqueda
-    
-    // --- ESTADO PARA EL NUEVO PRODUCTO ---
+    const [busqueda, setBusqueda] = useState(''); 
     const [productoPrincipal, setProductoPrincipal] = useState({
         descripcion: '',
         precio: '',
         stockCritico: '5',
         codigoBarras: ''
     });
-
-    // --- ESTADO PARA LA LISTA DE INGREDIENTES (LA RECETA TEMPORAL) ---
     const [listaIngredientes, setListaIngredientes] = useState<IngredienteReceta[]>([]);
-    
-    // Estados temporales para el selector de insumos dentro del modal
     const [tempInsumoId, setTempInsumoId] = useState('');
     const [tempCantidad, setTempCantidad] = useState('');
 
-    // --- CÁLCULO DE STOCK TEÓRICO EN TIEMPO REAL ---
+
+
+
     const stockMaximoPosible = useMemo(() => {
         if (listaIngredientes.length === 0) return 0;
         const limites = listaIngredientes.map(ing => {
             const prod = productos.find(p => p.id === Number(ing.insumoId));
-            // Si el insumo existe, dividimos su stock actual por lo que pide la receta
             return prod ? Math.floor(prod.stock / ing.cantidad) : 0;
         });
         return Math.min(...limites);
@@ -50,7 +44,6 @@ export const Recetas = () => {
         
         const insumo = productos.find(p => p.id === Number(tempInsumoId));
         
-        // Creamos el objeto cumpliendo con la interfaz IngredienteReceta
         const nuevoIngrediente: IngredienteReceta = {
             insumoId: Number(tempInsumoId),
             nombre: insumo?.descripcion || 'Insumo desconocido',
@@ -72,7 +65,7 @@ export const Recetas = () => {
                 ...productoPrincipal,
                 precio: Number(productoPrincipal.precio),
                 stockCritico: Number(productoPrincipal.stockCritico),
-                esInsumo: false, // Los platos preparados no son insumos
+                esInsumo: false, 
                 stock: 0 
             },
             ingredientes: listaIngredientes.map(ing => ({
@@ -101,7 +94,6 @@ export const Recetas = () => {
         }
     };
 
-    // Filtro para la tabla principal
     const recetasFiltradas = recetas.filter(r => 
         r.productoPadreNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
         r.insumoNombre?.toLowerCase().includes(busqueda.toLowerCase())

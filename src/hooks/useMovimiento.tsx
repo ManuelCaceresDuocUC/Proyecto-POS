@@ -27,14 +27,24 @@ export const useMovimiento = () => {
 
     const API_URL = "http://localhost:8080/api/movimientos";
 
-    const cargarMovimientos = async () => {
+    // Recibimos las fechas opcionales
+    const cargarMovimientos = async (fechaInicio?: string, fechaFin?: string) => {
         try {
             setLoading(true);
-            const respuesta = await fetch(API_URL);
-            const textoPlano = await respuesta.text(); 
-            console.log("Lo que llega del servidor:", textoPlano);
+            
+            // Construimos la URL con los parámetros si existen
+            let url = API_URL;
+            if (fechaInicio) {
+                url += `?fechaInicio=${fechaInicio}`;
+                if (fechaFin) {
+                    url += `&fechaFin=${fechaFin}`;
+                }
+            }
 
-            const datos = JSON.parse(textoPlano);
+            const respuesta = await fetch(url);
+            if (!respuesta.ok) throw new Error("Error en la respuesta del servidor");
+            
+            const datos = await respuesta.json();
             setMovimientos(datos);
         } catch (err) {
             console.log(err);
@@ -44,9 +54,10 @@ export const useMovimiento = () => {
         }
     };
 
+    // Al montar el componente, se llama sin parámetros (el backend asumirá que es HOY)
     useEffect(() => {
         cargarMovimientos();
     }, []);
 
-    return { cargarMovimientos, movimientos, loading, error,setError, };
+    return { cargarMovimientos, movimientos, loading, error, setError };
 }

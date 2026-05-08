@@ -1,5 +1,4 @@
 
-// import {  Link } from 'react-router-dom';
 
 import { useState } from "react";
 import { useLogin } from "../hooks/useLogin";
@@ -14,18 +13,15 @@ export const Login = () => {
     });
 
     const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault(); // Evita que la página se recargue
+        e.preventDefault(); 
 
-    // si no viene alguno de los input retorna la alerta
         if (!form.usuario || !form.contrasena) return alert("Completa todos los campos");
 
-    // Llamamos a la función del Hook y le entregamos los datos 
         logearUsuario({
             usuario: form.usuario,
             contrasena: form.contrasena 
         });
 
-    // Limpiamos el formulario
     setForm({ usuario: '',
         contrasena: '', });
     };
