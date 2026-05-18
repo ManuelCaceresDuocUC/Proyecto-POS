@@ -57,49 +57,73 @@ export const useVentas = () => {
         if (!metodoPago) return;
 
         try {
-        Swal.fire({
-            title: 'Procesando...',
-            text: metodoPago === 'tarjeta' ? 'Siga las instrucciones en la maquinita' : 'Registrando venta',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-        const datosVenta = {
-            monto: Math.round(totalVenta),
-            items: carrito.map(p => ({
-            productoId: p.id,
-            cantidad: p.cantidadSeleccionada
-            }))
-        };
-        const url = metodoPago === 'tarjeta' 
-            ? "http://localhost:8080/api/pagos/cobrar" 
-            : "http://localhost:8080/api/pagos/efectivo"; 
+            Swal.fire({
+                title: 'Procesando...',
+                text: metodoPago === 'tarjeta' ? 'Siga las instrucciones en la maquinita Getnet' : 'Registrando venta',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
 
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datosVenta)
-        });
+            const datosVenta = {
+                monto: Math.round(totalVenta),
+                items: carrito.map(p => ({
+                    productoId: p.id,
+                    cantidad: p.cantidadSeleccionada
+                }))
+            };
 
-        const resultado = await res.json();
+            if (metodoPago === 'tarjeta') {
+                // 1. PASO LOCAL: Despertamos al Agente Local en tu PC para que active el POS
+                const resAgente = await fetch('https://mulch-jolt-glamorous.ngrok-free.dev/api/pos/cobrar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ monto: datosVenta.monto })
+                });
 
-        if (!res.ok) {
-            throw new Error(resultado.message || "Error en la transacción");
-        }
-        Swal.fire({
-            title: '¡Venta Completada!',
-            text: resultado.message,
-            icon: 'success',
-            timer: 2000
-        });
+                const resultadoAgente = await resAgente.json();
 
-        setCarrito([]);
-        setShowModalPago(false);
-        setMetodoPago("");
-        setBusqueda("");
+                if (!resAgente.ok || resultadoAgente.status !== "APROBADO") {
+                    throw new Error(resultadoAgente.mensaje || "Pago rechazado por la maquinita Getnet");
+                }
+
+                // 2. PASO NUBE: Si la maquinita aprobó, ahora sí guardamos la venta en AWS
+                const urlAws = `${import.meta.env.VITE_API_URL}/pagos/cobrar`; // O la ruta que uses en AWS para guardar ventas de tarjeta
+                const resAws = await fetch(urlAws, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datosVenta)
+                });
+
+                if (!resAws.ok) throw new Error("Cobro exitoso en máquina, pero falló al guardar en la nube");
+
+            } else {
+                // PASO EFECTIVO: Va directo a la nube de AWS
+                const url = `${import.meta.env.VITE_API_URL}/pagos/efectivo`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datosVenta)
+                });
+
+                const resultado = await res.json();
+                if (!res.ok) throw new Error(resultado.message || "Error en la transacción en la nube");
+            }
+
+            Swal.fire({
+                title: '¡Venta Completada!',
+                text: 'Registro guardado exitosamente',
+                icon: 'success',
+                timer: 2000
+            });
+
+            setCarrito([]);
+            setShowModalPago(false);
+            setMetodoPago("");
+            setBusqueda("");
 
         } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Error inesperado";
-        Swal.fire('Venta Cancelada', msg, 'error');
+            const msg = err instanceof Error ? err.message : "Error inesperado";
+            Swal.fire('Venta Cancelada', msg, 'error');
         }
     };
     return {

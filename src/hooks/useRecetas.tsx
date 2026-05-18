@@ -15,8 +15,7 @@ export const useRecetas = () => {
     const [recetas, setRecetas] = useState<Receta[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const API_URL = "http://localhost:8080/api/recetas";
-
+    const API_URL = `${import.meta.env.VITE_API_URL}/recetas`;
     const cargarRecetas = async () => {
         try {
             setLoading(true);

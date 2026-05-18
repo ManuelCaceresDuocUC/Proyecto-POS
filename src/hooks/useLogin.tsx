@@ -9,7 +9,7 @@ interface Usuario {
 }
 
 export const useLogin = () => {
-    const API_URL = "http://localhost:8080/api/usuarios";
+    const API_URL = `${import.meta.env.VITE_API_URL}/usuarios`;
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

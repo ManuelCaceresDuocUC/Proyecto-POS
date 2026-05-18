@@ -33,7 +33,7 @@ export const useInventario = () => {
     const [error, setError] = useState<string | null>(null);
     const [busqueda, setBusqueda] = useState('');
 
-    const API_URL = "http://localhost:8080/api/productos";
+    const API_URL = `${import.meta.env.VITE_API_URL}/productos`;
 
     const cargarProductos = async () => {
         try {

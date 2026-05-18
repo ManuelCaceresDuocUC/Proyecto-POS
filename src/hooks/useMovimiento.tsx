@@ -25,7 +25,7 @@ export const useMovimiento = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const API_URL = "http://localhost:8080/api/movimientos";
+    const API_URL = `${import.meta.env.VITE_API_URL}/movimientos`;
 
     // Recibimos las fechas opcionales
     const cargarMovimientos = async (fechaInicio?: string, fechaFin?: string) => {
