@@ -1,8 +1,6 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
 
-
-
 interface Producto {
     id: number;
     descripcion: string;
@@ -14,18 +12,19 @@ interface ProductoCarrito extends Producto {
     cantidadSeleccionada: number;
 }
 
-export const useVentas = () => {
+// 👉 CAMBIO AQUI: Recibe una función opcional para recargar el stock
+export const useVentas = (onVentaExitosa?: () => void) => {
     const [metodoPago, setMetodoPago] = useState("");
     const [showModalPago, setShowModalPago] = useState(false);
     const [busqueda, setBusqueda] = useState('');
 
     const [carrito, setCarrito] = useState<ProductoCarrito[]>([])
+    
     const agregarAlCarrito = (producto: Producto) => {
         setCarrito( prev =>{
             const existe = prev.find( p => p.id === producto.id);
             if (existe){
                 return prev.map(p => p.id === producto.id ? {...p, cantidadSeleccionada: p.cantidadSeleccionada + 1}:p)
-            
             };
             return [...prev,{...producto,cantidadSeleccionada: 1}];
         });
@@ -49,9 +48,7 @@ export const useVentas = () => {
 
     const totalVenta = carrito.reduce((acc, p) => acc + (p.precio * p.cantidadSeleccionada), 0);
     
-    
     const vaciarCarrito = () => setCarrito([]);
-
 
     const confirmarVentaFinal = async () => {
         if (!metodoPago) return;
@@ -76,7 +73,10 @@ export const useVentas = () => {
                 // 1. PASO LOCAL: Despertamos al Agente Local en tu PC para que active el POS
                 const resAgente = await fetch('https://mulch-jolt-glamorous.ngrok-free.dev/api/pos/cobrar', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true' 
+                    },
                     body: JSON.stringify({ monto: datosVenta.monto })
                 });
 
@@ -87,7 +87,7 @@ export const useVentas = () => {
                 }
 
                 // 2. PASO NUBE: Si la maquinita aprobó, ahora sí guardamos la venta en AWS
-                const urlAws = `${import.meta.env.VITE_API_URL}/pagos/cobrar`; // O la ruta que uses en AWS para guardar ventas de tarjeta
+                const urlAws = `${import.meta.env.VITE_API_URL}/pagos/cobrar`; 
                 const resAws = await fetch(urlAws, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -121,11 +121,17 @@ export const useVentas = () => {
             setMetodoPago("");
             setBusqueda("");
 
+            // 👉 CAMBIO AQUI: Ejecutamos la función para refrescar el stock si nos la enviaron
+            if (onVentaExitosa) {
+                onVentaExitosa();
+            }
+
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Error inesperado";
             Swal.fire('Venta Cancelada', msg, 'error');
         }
     };
+    
     return {
         carrito,
         setCarrito,

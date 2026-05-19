@@ -5,10 +5,15 @@ import { useVentas } from '../hooks/useVentas';
 
 export const Ventas = () => {
   const buscadorRef = useRef<HTMLDivElement>(null);
-  const { productos } = useInventario();
+  
+  // 👉 CAMBIO AQUI: Asegúrate de que `useInventario` te entregue la función para recargar los datos
+  // (Si tu función se llama distinto a "cargarProductos", cámbiala aquí y abajo)
+  const { productos, cargarProductos } = useInventario(); 
+  
   const [pagaCon, setPagaCon] = useState(0);
   const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
   
+  // 👉 CAMBIO AQUI: Le pasamos la función al hook useVentas
   const { 
     carrito,
     agregarAlCarrito,  
@@ -22,7 +27,7 @@ export const Ventas = () => {
     setShowModalPago,
     metodoPago,
     setMetodoPago 
-  } = useVentas();
+  } = useVentas(cargarProductos); 
 
   const totalBruto = totalVenta; 
   const neto = Math.round(totalBruto / 1.19);
@@ -45,9 +50,6 @@ export const Ventas = () => {
         p.id.toString().includes(busqueda)
       ).slice(0, 5);
   
-  
-
-
   return (
     <div className='min-h-screen bg-gray-50 flex flex-col items-center p-10 relative'>
       <Link to="/" className='absolute top-10 left-10'>
@@ -143,7 +145,7 @@ export const Ventas = () => {
             <button 
               onClick={() => setShowModalPago(true)}
               disabled={carrito.length === 0}
-              className="w-full bg-green-600 text-white font-black py-4 rounded-xl shadow-lg uppercase"
+              className="w-full bg-green-600 text-white font-black py-4 rounded-xl shadow-lg uppercase mt-4"
             >
               Finalizar Compra
             </button>
