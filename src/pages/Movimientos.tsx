@@ -27,11 +27,7 @@ export const Movimientos = () => {
 
     return (
         <div className="p-8">
-            <Link to="/" className="mb-8 inline-block">
-                <button className='bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-xl shadow-lg transition-all active:scale-95 flex items-center gap-2'>
-                    <span>←</span> Volver al home
-                </button>
-            </Link>
+            
             
             <h1 className='text-4xl font-black text-gray-800 mb-8 tracking-tight'>Ventas y Análisis</h1>
 

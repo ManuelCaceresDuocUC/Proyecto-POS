@@ -183,9 +183,7 @@ export const Inventario = () => {
 
   return (
     <div className='min-h-screen bg-gray-50 flex flex-col items-center p-10 relative'>
-      <Link to="/" className='absolute top-10 left-10'>
-        <button className='bg-blue-600 text-white font-bold py-2 px-6 rounded-xl shadow-lg'>← Volver</button>
-      </Link>
+      
 
       <h1 className='text-4xl font-black text-gray-800 mb-8'>Inventario</h1>
 

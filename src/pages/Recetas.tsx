@@ -75,7 +75,7 @@ export const Recetas = () => {
         };
 
         try {
-            const res = await fetch('http://localhost:8080/api/productos/con-receta', {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/productos/con-receta`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -101,12 +101,7 @@ export const Recetas = () => {
 
     return (
         <div className='min-h-screen bg-gray-50 flex flex-col items-center p-10 relative'>
-            <Link to="/" className='absolute top-10 left-10'>
-                <button className='bg-blue-600 text-white font-bold py-2 px-6 rounded-xl shadow-lg'>
-                    ← Volver
-                </button>
-            </Link>
-
+            
             <h1 className='text-4xl font-black text-gray-800 mb-8'>Gestión de Recetas</h1>
 
             <div className='w-full max-w-4xl mb-6'>

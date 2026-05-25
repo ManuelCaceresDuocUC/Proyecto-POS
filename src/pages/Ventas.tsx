@@ -52,11 +52,7 @@ export const Ventas = () => {
   
   return (
     <div className='min-h-screen bg-gray-50 flex flex-col items-center p-10 relative'>
-      <Link to="/" className='absolute top-10 left-10'>
-        <button className='bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-xl shadow-lg transition-all active:scale-95 flex items-center gap-2'>
-          <span>←</span> Volver al home
-        </button>
-      </Link>
+      
 
       <h1 className='text-4xl font-black text-gray-800 mb-8 tracking-tight'>Ventas</h1>
 
