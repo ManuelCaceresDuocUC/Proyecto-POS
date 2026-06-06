@@ -30,5 +30,6 @@ jobs:
           aws-region: us-east-1 # Cambia esto si tu bucket está en otra región (ej: sa-east-1)
 
       - name: Sincronizar con S3
+        
         run: |
-          aws s3 sync ./dist s3://posbarlacteo-manuel-2026.s3-website-us-east-1.amazonaws.com --delete
+          aws s3 sync ./dist s3://posbarlacteo-manuel-2026 --delete
