@@ -37,25 +37,22 @@ export const Ventas = () => {
   const neto = Math.round(totalBruto / 1.19);
   const iva = totalBruto - neto;
 
-  // 👉 1. VERIFICAR ESTADO DE CAJA AL CARGAR (Conexión a Spring Boot)
+  // 👉 1. VERIFICAR ESTADO DE CAJA AL CARGAR (Conexión REAL a Spring Boot)
   useEffect(() => {
     const verificarEstadoCaja = async () => {
       try {
-        // Reemplaza con la URL de tu backend Spring Boot (ej: http://localhost:8080/api/caja/estado)
-        // const response = await fetch('http://tu-dominio.com/api/caja/estado');
-        // if (response.ok) {
-        //   const data = await response.json();
-        //   setCajaAbierta(data.abierta); // Asume que tu backend devuelve { "abierta": true/false }
-        // }
+        const response = await fetch('http://98.88.232.195:8080/api/caja/estado');
         
-        // Simulación temporal para que puedas ver la UI mientras conectas el backend
-        setTimeout(() => {
-          setCajaAbierta(false); // Cambia a true para probar el POS directamente
-          setCargandoCaja(false);
-        }, 800);
-
+        if (response.ok) {
+          const data = await response.json();
+          setCajaAbierta(data.abierta); 
+        } else {
+          console.error("Error al consultar el estado de la caja");
+        }
       } catch (error) {
-        console.error("Error al conectar con el servidor:", error);
+        console.error("Error de conexión con el servidor:", error);
+      } finally {
+        // Pase lo que pase, dejamos de mostrar la pantalla de carga
         setCargandoCaja(false);
       }
     };
@@ -77,57 +74,61 @@ export const Ventas = () => {
     return () => document.removeEventListener("mousedown", handleClickAfuera);
   }, []);
 
-  // 👉 2. ABRIR CAJA (POST a Spring Boot)
+  // 👉 2. ABRIR CAJA (POST REAL a Spring Boot)
   const handleAbrirCaja = async (e: React.FormEvent) => {
     e.preventDefault();
     if (montoApertura.trim() === '') return;
     
     setCargandoCaja(true);
     try {
-      /* CÓDIGO REAL PARA SPRING BOOT:
-      const response = await fetch('http://tu-dominio.com/api/caja/abrir', {
+      const response = await fetch('http://98.88.232.195:8080/api/caja/abrir', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ montoInicial: Number(montoApertura) })
       });
-      if (!response.ok) throw new Error('Error al abrir caja');
-      */
       
-      // Simulación de éxito
-      setTimeout(() => {
-        setCajaAbierta(true);
-        setCargandoCaja(false);
-      }, 500);
+      if (!response.ok) {
+        const errorMsg = await response.text();
+        throw new Error(errorMsg || 'Error al abrir caja');
+      }
+      
+      // Si el servidor responde OK, actualizamos el estado visual
+      setCajaAbierta(true);
 
     } catch (error) {
-      alert("Hubo un error al abrir la caja en el servidor."+error);
-      setCargandoCaja(false);
-    }
+        // Validación segura en TypeScript en lugar de usar 'any'
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        alert("Error al cerrar la caja: " + errorMessage);
+      } finally {
+        setCargandoCaja(false);
+      }
   };
 
-  // 👉 3. CERRAR CAJA (POST a Spring Boot)
+  // 👉 3. CERRAR CAJA (POST REAL a Spring Boot)
   const handleCerrarCaja = async () => {
     const confirmar = window.confirm("¿Estás seguro de que deseas cerrar la caja del turno?");
     if (confirmar) {
       setCargandoCaja(true);
       try {
-        /* CÓDIGO REAL PARA SPRING BOOT:
-        const response = await fetch('http://tu-dominio.com/api/caja/cerrar', {
+        const response = await fetch('http://98.88.232.195:8080/api/caja/cerrar', {
           method: 'POST'
         });
-        if (!response.ok) throw new Error('Error al cerrar caja');
-        */
         
-        // Simulación de éxito
-        setTimeout(() => {
-          setCajaAbierta(false);
-          setMenuAbierto(false);
-          setMontoApertura('');
-          setCargandoCaja(false);
-        }, 500);
+        if (!response.ok) {
+          const errorMsg = await response.text();
+          throw new Error(errorMsg || 'Error al cerrar caja');
+        }
+        
+        // Si el servidor responde OK, reseteamos la vista
+        setCajaAbierta(false);
+        setMenuAbierto(false);
+        setMontoApertura('');
 
       } catch (error) {
-        alert("Error al cerrar la caja en el servidor."+error);
+      // Validación segura en TypeScript en lugar de usar 'any'
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      alert("Hubo un error al abrir la caja: " + errorMessage);
+      } finally {
         setCargandoCaja(false);
       }
     }
