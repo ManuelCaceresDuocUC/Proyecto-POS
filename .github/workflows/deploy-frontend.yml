@@ -3,7 +3,7 @@ name: Deploy Frontend to S3
 on:
   push:
     branches:
-      - main # O el nombre de tu rama principal (master/main)
+      - main # Asegúrate de que sea 'main' o 'master' según tu rama principal
 
 jobs:
   deploy:
@@ -15,7 +15,7 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-size: 20
+          node-version: 20 # Corregido también 'node-size' por 'node-version' que es el estándar
 
       - name: Instalar y Compilar
         run: |
@@ -25,9 +25,9 @@ jobs:
       - name: Configurar Credenciales AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets::AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets::AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1 # Cambia por tu región de S3 si es otra
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # 👈 Corregido a punto (.)
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} # 👈 Corregido a punto (.)
+          aws-region: us-east-1 # Cambia esto si tu bucket está en otra región (ej: sa-east-1)
 
       - name: Sincronizar con S3
         run: |
