@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { useInventario, type Producto } from '../hooks/useInventario';
 import { useEffect, useRef, useState } from 'react';
 import Swal from 'sweetalert2';

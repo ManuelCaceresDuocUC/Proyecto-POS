@@ -12,7 +12,7 @@ export const DashboardLayout = () => {
   // Definimos las opciones del menú para iterarlas fácilmente
   const menuOptions = [
     { name: 'Inicio', path: '/' },
-    { name: 'Ventas', path: '/ventas' },
+    { name: 'Caja', path: '/ventas' },
     { name: 'Inventario', path: '/inventario' },
     { name: 'Movimientos', path: '/movimientos' },
     { name: 'Recetas', path: '/recetas' },

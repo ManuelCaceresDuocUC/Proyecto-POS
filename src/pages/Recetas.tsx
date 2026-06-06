@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { useInventario } from '../hooks/useInventario'; 
 import { useRecetas } from '../hooks/useRecetas'; 
 import { useState, useMemo } from 'react';
