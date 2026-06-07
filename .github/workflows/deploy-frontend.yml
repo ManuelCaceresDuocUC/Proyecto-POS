@@ -1,9 +1,9 @@
-name: Deploy Frontend to S3
+name: Deploy Frontend to EC2
 
 on:
   push:
     branches:
-      - main # Asegúrate de que sea 'main' o 'master' según tu rama principal
+      - main # Cambia a master si esa es tu rama principal
 
 jobs:
   deploy:
@@ -15,21 +15,19 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20 # Corregido también 'node-size' por 'node-version' que es el estándar
+          node-version: 20
 
       - name: Instalar y Compilar
         run: |
           npm install
           npm run build
 
-      - name: Configurar Credenciales AWS
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Desplegar Archivos a EC2 (Nginx)
+        uses: appleboy/scp-action@master
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # 👈 Corregido a punto (.)
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} # 👈 Corregido a punto (.)
-          aws-region: us-east-1 # Cambia esto si tu bucket está en otra región (ej: sa-east-1)
-
-      - name: Sincronizar con S3
-        
-        run: |
-          aws s3 sync ./dist s3://posbarlacteo-manuel-2026 --delete
+          host: ${{ secrets.EC2_FRONTEND_HOST }}
+          username: ${{ secrets.EC2_FRONTEND_USER }}
+          key: ${{ secrets.EC2_FRONTEND_KEY }}
+          source: "dist/*"
+          target: "/var/www/sistema-frontend"
+          strip_components: 1 # Evita que se cree una carpeta llamada 'dist' dentro del EC2
