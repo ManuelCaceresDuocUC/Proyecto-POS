@@ -37,11 +37,11 @@ export const Ventas = () => {
   const neto = Math.round(totalBruto / 1.19);
   const iva = totalBruto - neto;
 
-  // 👉 1. VERIFICAR ESTADO DE CAJA AL CARGAR (Conexión REAL a Spring Boot)
+  // 👉 1. VERIFICAR ESTADO DE CAJA AL CARGAR (Conexión a través del Proxy Nginx)
   useEffect(() => {
     const verificarEstadoCaja = async () => {
       try {
-        const response = await fetch('http://98.88.232.195:8080/api/caja/estado');
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/caja/estado`);
         
         if (response.ok) {
           const data = await response.json();
@@ -74,14 +74,14 @@ export const Ventas = () => {
     return () => document.removeEventListener("mousedown", handleClickAfuera);
   }, []);
 
-  // 👉 2. ABRIR CAJA (POST REAL a Spring Boot)
+  // 👉 2. ABRIR CAJA (POST a través del Proxy Nginx)
   const handleAbrirCaja = async (e: React.FormEvent) => {
     e.preventDefault();
     if (montoApertura.trim() === '') return;
     
     setCargandoCaja(true);
     try {
-      const response = await fetch('http://98.88.232.195:8080/api/caja/abrir', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/caja/abrir`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ montoInicial: Number(montoApertura) })
@@ -98,19 +98,19 @@ export const Ventas = () => {
     } catch (error) {
         // Validación segura en TypeScript en lugar de usar 'any'
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-        alert("Error al cerrar la caja: " + errorMessage);
+        alert("Error al abrir la caja: " + errorMessage);
       } finally {
         setCargandoCaja(false);
       }
   };
 
-  // 👉 3. CERRAR CAJA (POST REAL a Spring Boot)
+  // 👉 3. CERRAR CAJA (POST a través del Proxy Nginx)
   const handleCerrarCaja = async () => {
     const confirmar = window.confirm("¿Estás seguro de que deseas cerrar la caja del turno?");
     if (confirmar) {
       setCargandoCaja(true);
       try {
-        const response = await fetch('http://98.88.232.195:8080/api/caja/cerrar', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/caja/cerrar`, {
           method: 'POST'
         });
         
@@ -127,7 +127,7 @@ export const Ventas = () => {
       } catch (error) {
       // Validación segura en TypeScript en lugar de usar 'any'
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      alert("Hubo un error al abrir la caja: " + errorMessage);
+      alert("Hubo un error al cerrar la caja: " + errorMessage);
       } finally {
         setCargandoCaja(false);
       }
