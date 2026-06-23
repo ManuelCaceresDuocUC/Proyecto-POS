@@ -11,6 +11,10 @@ export interface Producto {
     esInsumo: boolean;
     unidadMedida: string;
     receta?: IngredienteReceta[];
+    categoria?: {
+    id: number;
+    nombre: string;
+    };
     }
 interface IngredienteParaEnviar {
     insumoId: number;

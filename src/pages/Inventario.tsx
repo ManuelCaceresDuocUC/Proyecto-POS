@@ -1,11 +1,17 @@
 import { useInventario, type Producto } from '../hooks/useInventario';
 import { useEffect, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
+import { LectorCamara } from '../components/LectorCamara';
 
 interface ItemRecetaLocal {
   insumoId: number;
   cantidad: number;
   descripcion?: string;
+}
+
+interface Categoria {
+  id: number;
+  nombre: string;
 }
 
 export const Inventario = () => {
@@ -26,9 +32,30 @@ export const Inventario = () => {
     productosRef.current = productos;
   }, [productos]);
 
-  // Estados del modal y formularios
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+
+  useEffect(() => {
+    const cargarCategorias = async () => {
+      try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/categorias`);
+          if (response.ok) {
+          const data = await response.json();
+          setCategorias(data);
+        }
+      } catch (error) {
+        console.error("Error al cargar las categorías:", error);
+      }
+    };
+    cargarCategorias();
+  }, []);
+
+  // Estados del modal y cámara
   const [showModalProducto, setShowModalProducto] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
+  
+  // Control de cámara
+  const [mostrarCamaraBusqueda, setMostrarCamaraBusqueda] = useState(false);
+  const [mostrarCamaraFormulario, setMostrarCamaraFormulario] = useState(false);
   
   const [form, setForm] = useState({
     codigoBarras: '',
@@ -37,37 +64,55 @@ export const Inventario = () => {
     stock: '',
     stockCritico: '',
     esInsumo: true,
-    unidadMedida: 'UN'
+    unidadMedida: 'UN',
+    categoriaId: '' as number | '' 
   });
 
   const [listaIngredientesSeleccionados, setListaIngredientesSeleccionados] = useState<ItemRecetaLocal[]>([]);
-  const [nuevoIngrediente, setNuevoIngrediente] = useState({
-    insumoId: 0,
-    cantidad: 0,
-    descripcion: ''
-  });
+  const [nuevoIngrediente, setNuevoIngrediente] = useState({ insumoId: 0, cantidad: 0, descripcion: '' });
 
-  // ==========================================
-  // NUEVOS ESTADOS PARA LOS FILTROS
-  // ==========================================
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'venta' | 'insumos'>('todos');
   const [soloCritico, setSoloCritico] = useState(false);
+  const [filtroCategoria, setFiltroCategoria] = useState<number | 'todas'>('todas');
 
-  // Aplicamos los filtros adicionales sobre los que ya filtró el buscador
   const productosFinales = productosFiltrados.filter(producto => {
-    // 1. Filtro por tipo (Pestañas)
     if (filtroTipo === 'venta' && producto.esInsumo) return false;
     if (filtroTipo === 'insumos' && !producto.esInsumo) return false;
-    
-    // 2. Filtro de Stock Crítico (Botón de alerta)
     if (soloCritico) {
       const stockVisual = obtenerStockVisual(producto);
       if (stockVisual > producto.stockCritico) return false;
     }
-    
+    if (filtroCategoria !== 'todas') {
+      if (producto.categoria?.id !== filtroCategoria) return false;
+    }
     return true;
   });
-  // ==========================================
+
+  // Procesar código para la barra de búsqueda principal (Carga stock rápido)
+  const procesarCodigoEscaneadoBusqueda = (codigo: string) => {
+    setMostrarCamaraBusqueda(false);
+    setBusqueda(''); 
+
+    const productoEncontrado = productosRef.current.find(
+      p => p.codigoBarras === codigo || p.id.toString() === codigo
+    );
+    
+    if (productoEncontrado) {
+      manejarEntradaStock(productoEncontrado);
+    } else {
+      Swal.fire('No encontrado', `No existe un producto con el código: ${codigo}`, 'warning');
+    }
+  };
+
+  // ✨ NUEVO: Procesar código escaneado dentro del formulario (Nuevo/Editar)
+  const procesarCodigoEscaneadoFormulario = (codigo: string) => {
+    setMostrarCamaraFormulario(false);
+    setForm(prev => ({ ...prev, codigoBarras: codigo }));
+    
+    // Feedback visual rápido
+    const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1200 });
+    Toast.fire({ icon: 'success', title: 'Código capturado' });
+  };
 
   const agregarIngredienteALista = () => {
     if (nuevoIngrediente.insumoId === 0 || nuevoIngrediente.cantidad <= 0) {
@@ -89,7 +134,8 @@ export const Inventario = () => {
       stock: producto.stock.toString(),
       stockCritico: producto.stockCritico.toString(),
       esInsumo: producto.esInsumo ?? true,
-      unidadMedida: producto.unidadMedida
+      unidadMedida: producto.unidadMedida,
+      categoriaId: producto.categoria?.id || ''
     });
     
     if (producto.receta) {
@@ -109,7 +155,7 @@ export const Inventario = () => {
     setListaIngredientesSeleccionados([]);
     setForm({ 
       codigoBarras: '', descripcion: '', precio: '', stock: '', 
-      stockCritico: '', esInsumo: true, unidadMedida: 'UN' 
+      stockCritico: '', esInsumo: true, unidadMedida: 'UN', categoriaId: ''
     });
   };
 
@@ -123,6 +169,7 @@ export const Inventario = () => {
     }
 
     const codigoFinal = form.codigoBarras.trim() === "" ? generarCodigoProvisional() : form.codigoBarras;
+    const categoriaSeleccionada = categorias.find(c => c.id === form.categoriaId);
 
     const datosProducto = {
       descripcion: form.descripcion,
@@ -132,7 +179,9 @@ export const Inventario = () => {
       esInsumo: form.esInsumo,
       unidadMedida: form.unidadMedida,
       codigoBarras: codigoFinal,
+      categoria: form.categoriaId ? categoriaSeleccionada : undefined
     };
+
     if (editandoId) {
       await editarProducto(editandoId, datosProducto);
     } else {
@@ -153,10 +202,7 @@ export const Inventario = () => {
       showCancelButton: true,
       confirmButtonText: 'Sumar al stock',
       cancelButtonText: 'Cancelar',
-      inputAttributes: {
-        min: '0.01',
-        step: '0.01'
-      },
+      inputAttributes: { min: '0.01', step: '0.01' },
       inputValidator: (value) => {
         if (!value || Number(value) <= 0) {
           return '¡Debes ingresar una cantidad válida!';
@@ -167,14 +213,9 @@ export const Inventario = () => {
     if (cantidad) {
       try {
         const nuevoStock = producto.stock + Number(cantidad);
-        await editarProducto(producto.id, {
-          ...producto,
-          stock: nuevoStock
-        });
-
+        await editarProducto(producto.id, { ...producto, stock: nuevoStock });
         Swal.fire('Actualizado', `Se han sumado ${cantidad} al stock de ${producto.descripcion}`, 'success');
-      } catch (error) {
-        console.log(error);
+      } catch {
         Swal.fire('Error', 'No se pudo actualizar el stock', 'error');
       }
     }
@@ -182,45 +223,50 @@ export const Inventario = () => {
 
   return (
     <div className='min-h-screen bg-gray-50 flex flex-col items-center p-10 relative'>
-      
-
       <h1 className='text-4xl font-black text-gray-800 mb-8'>Inventario</h1>
 
-      {/* BARRA DE BÚSQUEDA Y FILTROS */}
       <div className='w-full max-w-6xl mb-6 space-y-4'>
-        <input 
-          type="text"
-          placeholder='🔍 Buscar producto por nombre o código...'
-          className='w-full p-4 rounded-xl border border-gray-300 shadow-sm outline-none text-lg focus:ring-2 focus:ring-blue-500'
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
+        <div className="flex gap-4">
+          <input 
+            type="text"
+            placeholder='🔍 Buscar o pistolear código...'
+            className='w-full p-4 rounded-xl border border-gray-300 shadow-sm outline-none text-lg focus:ring-2 focus:ring-blue-500'
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (busqueda.trim() !== '') procesarCodigoEscaneadoBusqueda(busqueda.trim());
+              }
+            }}
+          />
+          
+          <button 
+            onClick={() => setMostrarCamaraBusqueda(true)}
+            className="bg-gray-800 hover:bg-gray-900 text-white px-6 rounded-xl font-bold flex items-center gap-2 transition-colors whitespace-nowrap"
+          >
+            📷 <span className="hidden sm:inline">Escanear</span>
+          </button>
+          
+          <select 
+            className="w-64 p-4 rounded-xl border border-gray-300 shadow-sm outline-none text-lg focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer"
+            value={filtroCategoria}
+            onChange={(e) => setFiltroCategoria(e.target.value === 'todas' ? 'todas' : Number(e.target.value))}
+          >
+            <option value="todas">📦 Todas las Categorías</option>
+            {categorias.map(c => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
+            ))}
+          </select>
+        </div>
         
         <div className='flex flex-col md:flex-row justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-200'>
-          
-          {/* Pestañas de Tipo */}
           <div className="flex bg-gray-100 p-1 rounded-lg w-full md:w-auto">
-            <button 
-              onClick={() => setFiltroTipo('todos')}
-              className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-bold transition-all ${filtroTipo === 'todos' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Todos
-            </button>
-            <button 
-              onClick={() => setFiltroTipo('venta')}
-              className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-bold transition-all ${filtroTipo === 'venta' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Productos
-            </button>
-            <button 
-              onClick={() => setFiltroTipo('insumos')}
-              className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-bold transition-all ${filtroTipo === 'insumos' ? 'bg-white shadow text-green-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Insumos
-            </button>
+            <button onClick={() => setFiltroTipo('todos')} className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-bold transition-all ${filtroTipo === 'todos' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>Todos</button>
+            <button onClick={() => setFiltroTipo('venta')} className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-bold transition-all ${filtroTipo === 'venta' ? 'bg-white shadow text-orange-600' : 'text-gray-500 hover:text-gray-700'}`}>Productos</button>
+            <button onClick={() => setFiltroTipo('insumos')} className={`flex-1 md:flex-none px-6 py-2 rounded-md text-sm font-bold transition-all ${filtroTipo === 'insumos' ? 'bg-white shadow text-green-600' : 'text-gray-500 hover:text-gray-700'}`}>Insumos</button>
           </div>
 
-          {/* Toggle Stock Crítico */}
           <button
             onClick={() => setSoloCritico(!soloCritico)}
             className={`mt-4 md:mt-0 flex items-center justify-center gap-2 px-5 py-2 w-full md:w-auto rounded-lg font-bold border transition-all ${soloCritico ? 'bg-red-50 border-red-200 text-red-600 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}
@@ -231,11 +277,10 @@ export const Inventario = () => {
         </div>
       </div>
       
+      {/* Tabla de Productos */}
       <div className='w-full max-w-6xl bg-white rounded-lg shadow-md border overflow-hidden'>
         <div className='p-4 border-b bg-gray-50 flex justify-between items-center'>
-          <h2 className='text-xl font-semibold text-gray-700'>
-            Resultados ({productosFinales.length})
-          </h2>
+          <h2 className='text-xl font-semibold text-gray-700'>Resultados ({productosFinales.length})</h2>
           <button onClick={() => setShowModalProducto(true)} className="bg-green-600 hover:bg-green-700 transition-colors text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2">
             <span>+</span> Nuevo Producto
           </button>
@@ -246,6 +291,7 @@ export const Inventario = () => {
             <tr>
               <th className='px-6 py-3'>Id</th>
               <th className='px-6 py-3'>Descripcion</th>
+              <th className='px-6 py-3'>Categoría</th>
               <th className='px-6 py-3'>Precio</th>
               <th className='px-6 py-3'>Stock (Real/Virtual)</th>
               <th className='px-6 py-3 text-center'>Acciones</th>
@@ -254,9 +300,7 @@ export const Inventario = () => {
           <tbody className='divide-y'>
             {productosFinales.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-10 text-center text-gray-500 font-medium">
-                  No se encontraron productos con estos filtros.
-                </td>
+                <td colSpan={6} className="px-6 py-10 text-center text-gray-500 font-medium">No se encontraron productos con estos filtros.</td>
               </tr>
             ) : (
               productosFinales.map((producto) => {
@@ -267,31 +311,18 @@ export const Inventario = () => {
                     <td className='px-6 py-4 text-gray-500'>#{producto.id}</td>
                     <td className='px-6 py-4'>
                       {producto.descripcion}
-                      {!producto.esInsumo && (producto.receta?.length || 0) > 0 && (
-                        <span className="ml-2 bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full text-[10px] font-bold">RECETA</span>
-                      )}
-                      {producto.esInsumo && (
-                        <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold">INSUMO</span>
-                      )}
+                      {!producto.esInsumo && (producto.receta?.length || 0) > 0 && <span className="ml-2 bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full text-[10px] font-bold">RECETA</span>}
+                      {producto.esInsumo && <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold">INSUMO</span>}
                     </td>
+                    <td className='px-6 py-4 text-sm text-gray-500'>{producto.categoria?.nombre || <span className="italic text-gray-400">Sin categoría</span>}</td>
                     <td className='px-6 py-4 font-bold text-gray-700'>${producto.precio.toLocaleString()}</td>
                     <td className={`px-6 py-4 font-bold ${esCritico ? 'text-red-600' : 'text-gray-700'}`}>
                       {stockVisual} <span className='text-[10px] text-gray-400'>{producto.unidadMedida}</span>
                     </td>
                     <td className='px-6 py-4 flex justify-center gap-3'>
-                      <button 
-                        onClick={() => manejarEntradaStock(producto)} 
-                        className="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-md font-bold flex items-center gap-1 transition-colors"
-                        title="Cargar Stock"
-                      >
-                        +📦
-                      </button>
-                      <button onClick={() => abrirEdicion(producto)} className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md font-bold transition-colors">
-                        Editar
-                      </button>
-                      <button onClick={() => eliminarProducto(producto.id)} className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-md font-bold transition-colors">
-                        Eliminar
-                      </button>
+                      <button onClick={() => manejarEntradaStock(producto)} className="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-md font-bold flex items-center gap-1 transition-colors" title="Cargar Stock">+📦</button>
+                      <button onClick={() => abrirEdicion(producto)} className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md font-bold transition-colors">Editar</button>
+                      <button onClick={() => eliminarProducto(producto.id)} className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-md font-bold transition-colors">Eliminar</button>
                     </td>
                   </tr>
                 );
@@ -301,6 +332,7 @@ export const Inventario = () => {
         </table>
       </div>
 
+      {/* FORMULARIO DE CREACIÓN/EDICIÓN */}
       {showModalProducto && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className='w-full max-w-md bg-white p-8 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto'>
@@ -312,18 +344,45 @@ export const Inventario = () => {
                 <button type="button" onClick={() => setForm({...form, esInsumo: false})} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${!form.esInsumo ? 'bg-orange-600 text-white shadow' : 'bg-white text-gray-600'}`}>PRODUCTO VENTA</button>
               </div>
 
-              <input type="text" placeholder="Código de barras" className='p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none' value={form.codigoBarras} onChange={(e) => setForm({...form, codigoBarras: e.target.value})} />
+              {/* ✨ MODIFICADO: Input de código de barras con soporte para Pistola Física y Cámara */}
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Código de barras" 
+                  className='flex-1 p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none' 
+                  value={form.codigoBarras} 
+                  onChange={(e) => setForm({...form, codigoBarras: e.target.value})} 
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault(); // Evita que se guarde/envíe el formulario entero al usar la pistola
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarCamaraFormulario(true)}
+                  className="bg-gray-100 border hover:bg-gray-200 px-3.5 rounded-xl transition-colors"
+                  title="Escanear con Cámara"
+                >
+                  📷
+                </button>
+              </div>
+
               <input type="text" placeholder="Descripción" className='p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none' value={form.descripcion} onChange={(e) => setForm({...form, descripcion: e.target.value})} />
               
+              <select 
+                className='p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white'
+                value={form.categoriaId}
+                onChange={(e) => setForm({...form, categoriaId: e.target.value === '' ? '' : Number(e.target.value)})}
+              >
+                <option value="">Selecciona una categoría...</option>
+                {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+
               <div className='grid grid-cols-2 gap-2'>
                 <div className='flex border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-500'>
                   <input type="number" step="0.01" className='w-full p-3 outline-none' placeholder="Stock" value={form.stock} onChange={(e)=> setForm({...form, stock: e.target.value})} />
-                  <select 
-                    className='bg-gray-100 px-2 text-xs outline-none cursor-pointer border-l' 
-                    value={form.unidadMedida || ""} 
-                    onChange={(e) => setForm({ ...form, unidadMedida: e.target.value })}
-                  >
-                    <option value="" disabled hidden>Medida</option>
+                  <select className='bg-gray-100 px-2 text-xs outline-none cursor-pointer border-l' value={form.unidadMedida || ""} onChange={(e) => setForm({ ...form, unidadMedida: e.target.value })}>
                     <option value="UN">UN</option>
                     <option value="KG">KG</option>
                     <option value="LT">LT</option>
@@ -334,7 +393,6 @@ export const Inventario = () => {
 
               <input type="number" placeholder="Stock Crítico (Alerta)" className='p-3 border rounded-xl focus:ring-2 focus:ring-red-500 outline-none' value={form.stockCritico} onChange={(e)=> setForm({...form, stockCritico: e.target.value})} />
 
-              {/* SECCIÓN RECETA DINÁMICA */}
               {!form.esInsumo && (
                 <div className="p-4 bg-orange-50 rounded-xl border border-orange-200 shadow-inner">
                   <p className="text-xs font-black text-orange-700 mb-2 uppercase italic flex items-center gap-1"><span>🥣</span> Ingredientes / Receta</p>
@@ -379,6 +437,22 @@ export const Inventario = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Render de Lector de Cámara para la Barra de Búsqueda Principal */}
+      {mostrarCamaraBusqueda && (
+        <LectorCamara 
+          onScan={procesarCodigoEscaneadoBusqueda} 
+          onClose={() => setMostrarCamaraBusqueda(false)} 
+        />
+      )}
+
+      {/* ✨ NUEVO: Render de Lector de Cámara exclusivo para el Formulario */}
+      {mostrarCamaraFormulario && (
+        <LectorCamara 
+          onScan={procesarCodigoEscaneadoFormulario} 
+          onClose={() => setMostrarCamaraFormulario(false)} 
+        />
       )}
     </div>
   );

@@ -1,13 +1,41 @@
 import { useState } from "react";
 import { useMovimiento, type Movimiento } from "../hooks/useMovimiento"; 
 
-type TipoFiltro = 'hoy' | 'dia' | 'periodo';
+// 1. Agregamos 'semana' y 'mes' a los tipos permitidos
+type TipoFiltro = 'hoy' | 'dia' | 'periodo' | 'semana' | 'mes';
+
+// Utilidades para calcular las fechas automáticamente
+const obtenerFechasSemana = () => {
+    const hoy = new Date();
+    const diaSemana = hoy.getDay() || 7; // Convertir domingo (0) a 7 para lógica Lunes-Domingo
+    
+    const inicio = new Date(hoy);
+    inicio.setDate(hoy.getDate() - diaSemana + 1); // Lunes
+    
+    const fin = new Date(inicio);
+    fin.setDate(inicio.getDate() + 6); // Domingo
+
+    return {
+        inicio: inicio.toISOString().split('T')[0],
+        fin: fin.toISOString().split('T')[0]
+    };
+};
+
+const obtenerFechasMes = () => {
+    const hoy = new Date();
+    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1); // Día 1 del mes actual
+    const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0); // Último día del mes actual
+
+    return {
+        inicio: inicio.toISOString().split('T')[0],
+        fin: fin.toISOString().split('T')[0]
+    };
+};
 
 export const Movimientos = () => {
     const { movimientos, loading, error, cargarMovimientos } = useMovimiento();
     const [ventaSeleccionada, setVentaSeleccionada] = useState<Movimiento | null>(null);
     
-    // Estados para el filtro
     const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>('hoy');
     const [fecha1, setFecha1] = useState('');
     const [fecha2, setFecha2] = useState('');
@@ -21,13 +49,19 @@ export const Movimientos = () => {
         } else if (tipoFiltro === 'periodo') {
             if (!fecha1 || !fecha2) return alert("Selecciona ambas fechas");
             cargarMovimientos(fecha1, fecha2);
+        } else if (tipoFiltro === 'semana') {
+            // 2. Calculamos las fechas y las enviamos al hook
+            const { inicio, fin } = obtenerFechasSemana();
+            cargarMovimientos(inicio, fin);
+        } else if (tipoFiltro === 'mes') {
+            // 3. Calculamos las fechas y las enviamos al hook
+            const { inicio, fin } = obtenerFechasMes();
+            cargarMovimientos(inicio, fin);
         }
     };
 
     return (
         <div className="p-8">
-            
-            
             <h1 className='text-4xl font-black text-gray-800 mb-8 tracking-tight'>Ventas y Análisis</h1>
 
             {/* SECCIÓN DE FILTROS */}
@@ -42,11 +76,14 @@ export const Movimientos = () => {
                     >
                         <option value="hoy">Ventas de Hoy</option>
                         <option value="dia">Un día específico</option>
-                        <option value="periodo">Un período</option>
+                        <option value="semana">Esta semana</option> {/* NUEVO */}
+                        <option value="mes">Este mes</option>       {/* NUEVO */}
+                        <option value="periodo">Un período manual</option>
                     </select>
                 </div>
 
-                {tipoFiltro !== 'hoy' && (
+                {/* 4. Ocultamos los inputs de fecha si eligen 'semana' o 'mes' (solo se muestran para dia y periodo) */}
+                {(tipoFiltro === 'dia' || tipoFiltro === 'periodo') && (
                     <div className="flex flex-col gap-1">
                         <label className="font-bold text-gray-700 text-sm">
                             {tipoFiltro === 'periodo' ? 'Desde:' : 'Selecciona el día:'}
