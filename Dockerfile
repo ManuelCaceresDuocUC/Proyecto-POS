@@ -8,7 +8,12 @@ RUN npm run build
 
 # Etapa 2: Servidor Web
 FROM nginx:alpine
-# Copia el resultado de la compilación de la etapa anterior (ajusta 'dist' si tu framework usa 'build' u otra carpeta)
+
+# Copia el resultado de la compilación de la etapa anterior
 COPY --from=build /app/dist /usr/share/nginx/html
+
+# IMPORTANTE: Copia tu configuración personalizada de Nginx
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
