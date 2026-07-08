@@ -28,27 +28,37 @@ export const Home = () => {
 
   return (
     <div className="p-10 flex flex-col gap-8">
+      {/* Encabezado de Bienvenida */}
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
         <h1 className="text-3xl font-black text-slate-800">
           Hola, {nombreParaMostrar} 👋
         </h1>
         <p className="text-slate-500 mt-2">
-          Bienvenido al sistema de administración. Selecciona un módulo en el menú lateral para comenzar.
+          Bienvenido al sistema de administración. Desde aquí puedes monitorear los pedidos en tiempo real.
         </p>
       </div>
 
-      {/* Widgets de resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white h-32 rounded-xl border border-slate-200 border-dashed flex items-center justify-center text-slate-400 font-medium">
-          Espacio para Resumen de Ventas
+      {/* 🚀 Panel de Vercel Incrustado */}
+      <div className="w-full flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-[600px]">
+        
+        {/* Pequeña barra superior para darle aspecto de "aplicación" (Opcional) */}
+        <div className="bg-slate-50 border-b border-slate-200 px-6 py-3">
+          <h2 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+            📦 Panel de Pedidos (En vivo)
+          </h2>
         </div>
-        <div className="bg-white h-32 rounded-xl border border-slate-200 border-dashed flex items-center justify-center text-slate-400 font-medium">
-          Espacio para Top Productos
-        </div>
-        <div className="bg-white h-32 rounded-xl border border-slate-200 border-dashed flex items-center justify-center text-slate-400 font-medium">
-          Espacio para Alertas de Stock
-        </div>
+
+        {/* El iframe que carga tu app de Vercel */}
+        <iframe 
+          src="https://panel-local.vercel.app/" 
+          width="100%" 
+          height="100%" 
+          title="Panel de Pedidos Externo"
+          className="border-none flex-grow"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        />
       </div>
+      
     </div>
   );
 };

@@ -67,6 +67,8 @@ export const useLogin = () => {
                 localStorage.setItem('usuarioRol', usuarioLogeado.rol || 'vendedor');
                 localStorage.setItem('usuarioNombre', usuarioLogeado.usuario);
                 localStorage.setItem('usuarioId', usuarioLogeado.id?.toString() || '1');
+                const idEmpresa = usuarioLogeado.empresa?.id || 1;
+                localStorage.setItem('empresaId', idEmpresa.toString());
 
                 navigate('/');
             } else {

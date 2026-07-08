@@ -42,17 +42,20 @@ export const useInventario = () => {
     const cargarProductos = async () => {
         try {
             setLoading(true);
-            // Si usas paginación, aquí puedes agregar ?page=0&size=20
-            const respuesta = await fetch(API_URL); 
+            
+            // ✨ 1. Obtenemos el ID de la empresa del LocalStorage
+            const empresaId = localStorage.getItem('empresaId') || "1";
+            
+            // ✨ 2. Lo agregamos a la URL
+            const urlConEmpresa = `${API_URL}?empresaId=${empresaId}`;
+            
+            const respuesta = await fetch(urlConEmpresa); 
             
             if (!respuesta.ok) {
                 throw new Error("No es posible contactar el servidor");
             }
             const datos = await respuesta.json();
             
-            // LA MAGIA ESTÁ AQUÍ:
-            // Si "content" existe, es porque viene paginado de Spring Boot. 
-            // Si no, es una lista normal.
             const listaProductos = datos.content ? datos.content : datos;
             
             setProductos(listaProductos);
@@ -93,30 +96,46 @@ export const useInventario = () => {
     };
 
     const agregarProducto = async (nuevo: Omit<Producto, 'id'>, ingredientes?: IngredienteParaEnviar[]) => {
-        try {
-            const urlFinal = ingredientes && ingredientes.length > 0 
-                ? `${API_URL}/con-receta` 
-                : API_URL;
-            const body = ingredientes && ingredientes.length > 0
-                ? { productoPrincipal: nuevo, ingredientes: ingredientes }
-                : nuevo;
-            const res = await fetch(urlFinal, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            if (!res.ok) {
-                const errorMsg = await res.text();
-                throw new Error(errorMsg || "Error en el servidor");
-            }
-            await cargarProductos(); 
-            Swal.fire('Guardado', 'Producto y receta registrados con éxito', 'success');
-        } catch (err: unknown) {
-            console.error("Error al agregar:", err);
-            Swal.fire('Error', 'No se pudo guardar el producto.', 'error');
-            throw err;
+    try {
+        // ✨ 1. Obtenemos el ID de la empresa de la sesión actual
+        const empresaIdStr = localStorage.getItem('empresaId') || "1";
+        const empresaId = parseInt(empresaIdStr, 10);
+
+        // ✨ 2. Creamos una copia del producto inyectándole la relación de la empresa
+        const productoConEmpresa = {
+            ...nuevo,
+            empresa: { id: empresaId } // La estructura exacta que espera Spring Boot
+        };
+
+        // ✨ 3. Determinamos la URL y adaptamos el cuerpo (body) según corresponda
+        const urlFinal = ingredientes && ingredientes.length > 0 
+            ? `${API_URL}/con-receta` 
+            : API_URL;
+
+        const body = ingredientes && ingredientes.length > 0
+            ? { productoPrincipal: productoConEmpresa, ingredientes: ingredientes }
+            : productoConEmpresa;
+
+        // 4. Enviamos la petición HTTP
+        const res = await fetch(urlFinal, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+            const errorMsg = await res.text();
+            throw new Error(errorMsg || "Error en el servidor");
         }
-    };
+
+        await cargarProductos(); 
+        Swal.fire('Guardado', 'Producto y receta registrados con éxito', 'success');
+    } catch (err: unknown) {
+        console.error("Error al agregar:", err);
+        Swal.fire('Error', 'No se pudo guardar el producto.', 'error');
+        throw err;
+    }
+};
 
     const editarProducto = async (id: number, datosActualizados: Omit<Producto, 'id'>) => {
         try {

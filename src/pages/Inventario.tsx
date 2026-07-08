@@ -2,6 +2,7 @@ import { useInventario, type Producto } from '../hooks/useInventario';
 import { useEffect, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import { LectorCamara } from '../components/LectorCamara';
+import { useNavigate } from 'react-router-dom'; // ✨ NUEVO: Importamos useNavigate
 
 interface ItemRecetaLocal {
   insumoId: number;
@@ -15,6 +16,25 @@ interface Categoria {
 }
 
 export const Inventario = () => {
+  const navigate = useNavigate(); // ✨ NUEVO: Inicializamos el hook
+  const usuarioRol = (localStorage.getItem('usuarioRol') || 'vendedor').toLowerCase().trim(); // ✨ NUEVO: Obtenemos el rol
+
+  // 🛡️ NUEVO: Protección de Ruta idéntica a Administración
+  useEffect(() => {
+    if (usuarioRol !== 'admin') {
+      Swal.fire({
+        icon: 'info',
+        title: 'Acceso Restringido',
+        text: 'Hola. Esta sección contiene información sensible y es exclusiva para administradores. Te redirigiremos a la pantalla principal.',
+        confirmButtonColor: '#3B82F6', // Azul amigable
+        confirmButtonText: 'Entendido',
+        allowOutsideClick: false, // Evita que lo cierren haciendo clic afuera
+        allowEscapeKey: false // Evita que lo cierren con ESC
+      }).then(() => {
+        navigate('/'); 
+      });
+    }
+  }, [usuarioRol, navigate]);
   const { 
     productos,
     eliminarProducto,
@@ -35,6 +55,8 @@ export const Inventario = () => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
 
   useEffect(() => {
+    if (usuarioRol !== 'admin') return; // ✨ NUEVO: Evitamos hacer peticiones si no es admin
+
     const cargarCategorias = async () => {
       try {
           const response = await fetch(`${import.meta.env.VITE_API_URL}/categorias`);
@@ -47,7 +69,7 @@ export const Inventario = () => {
       }
     };
     cargarCategorias();
-  }, []);
+  }, [usuarioRol]);
 
   // Estados del modal y cámara
   const [showModalProducto, setShowModalProducto] = useState(false);
@@ -88,7 +110,6 @@ export const Inventario = () => {
     return true;
   });
 
-  // Procesar código para la barra de búsqueda principal (Carga stock rápido)
   const procesarCodigoEscaneadoBusqueda = (codigo: string) => {
     setMostrarCamaraBusqueda(false);
     setBusqueda(''); 
@@ -104,12 +125,10 @@ export const Inventario = () => {
     }
   };
 
-  // ✨ NUEVO: Procesar código escaneado dentro del formulario (Nuevo/Editar)
   const procesarCodigoEscaneadoFormulario = (codigo: string) => {
     setMostrarCamaraFormulario(false);
     setForm(prev => ({ ...prev, codigoBarras: codigo }));
     
-    // Feedback visual rápido
     const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1200 });
     Toast.fire({ icon: 'success', title: 'Código capturado' });
   };
@@ -220,6 +239,9 @@ export const Inventario = () => {
       }
     }
   };
+
+  // ✨ NUEVO: Bloqueamos el renderizado si no es administrador (al igual que en Administracion.tsx)
+  if (usuarioRol !== 'admin') return null;
 
   return (
     <div className='min-h-screen bg-gray-50 flex flex-col items-center p-10 relative'>
@@ -344,7 +366,6 @@ export const Inventario = () => {
                 <button type="button" onClick={() => setForm({...form, esInsumo: false})} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${!form.esInsumo ? 'bg-orange-600 text-white shadow' : 'bg-white text-gray-600'}`}>PRODUCTO VENTA</button>
               </div>
 
-              {/* ✨ MODIFICADO: Input de código de barras con soporte para Pistola Física y Cámara */}
               <div className="flex gap-2">
                 <input 
                   type="text" 
@@ -354,7 +375,7 @@ export const Inventario = () => {
                   onChange={(e) => setForm({...form, codigoBarras: e.target.value})} 
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      e.preventDefault(); // Evita que se guarde/envíe el formulario entero al usar la pistola
+                      e.preventDefault(); 
                     }
                   }}
                 />
@@ -439,7 +460,6 @@ export const Inventario = () => {
         </div>
       )}
 
-      {/* Render de Lector de Cámara para la Barra de Búsqueda Principal */}
       {mostrarCamaraBusqueda && (
         <LectorCamara 
           onScan={procesarCodigoEscaneadoBusqueda} 
@@ -447,7 +467,6 @@ export const Inventario = () => {
         />
       )}
 
-      {/* ✨ NUEVO: Render de Lector de Cámara exclusivo para el Formulario */}
       {mostrarCamaraFormulario && (
         <LectorCamara 
           onScan={procesarCodigoEscaneadoFormulario} 

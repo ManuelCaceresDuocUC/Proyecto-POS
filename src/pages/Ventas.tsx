@@ -67,8 +67,10 @@ export const Ventas = () => {
     setBusqueda,
     setShowModalPago,
     metodoPago,
-    setMetodoPago 
-  } = useVentas(cargarProductos); 
+    setMetodoPago,
+    proveedorTarjeta,    // <--- AGRÉGALO AQUÍ
+    setProveedorTarjeta  // <--- AGRÉGALO AQUÍ
+} = useVentas(cargarProductos); 
 
   const totalBruto = totalVenta; 
   const neto = Math.round(totalBruto / 1.19);
@@ -540,9 +542,10 @@ const handleConfirmarCierreFinal = async () => {
               <span className="text-5xl font-black text-blue-600">${totalBruto.toLocaleString()}</span>
             </div>
             
+            {/* Selector de Método de Pago */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <button 
-                onClick={() => setMetodoPago('EFECTIVO')}
+                onClick={() => { setMetodoPago('EFECTIVO'); setProveedorTarjeta(null); }}
                 className={`py-4 rounded-xl border-2 font-bold text-lg transition-all ${metodoPago === 'EFECTIVO' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}
               >
                 💵 Efectivo
@@ -554,6 +557,34 @@ const handleConfirmarCierreFinal = async () => {
                 💳 Tarjeta
               </button>
             </div>
+
+            {/* Selector de Máquina (Solo si es tarjeta) */}
+            {metodoPago === 'TARJETA' && (
+              <div className="mb-6 animate-fadeIn">
+                <label className="block text-sm font-bold text-gray-700 mb-3">Selecciona la terminal:</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => setProveedorTarjeta('GETNET')}
+                    className={`py-3 rounded-lg border-2 font-bold transition-all ${proveedorTarjeta === 'GETNET' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500'}`}
+                  >
+                    Getnet
+                  </button>
+                  <button 
+                    onClick={() => setProveedorTarjeta('MERCADOPAGO')}
+                    className={`py-3 rounded-lg border-2 font-bold transition-all ${proveedorTarjeta === 'MERCADOPAGO' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-500'}`}
+                  >
+                    Mercado Pago
+                  </button>
+                  <button 
+                    type="button"
+                    className={`p-2 border rounded ${proveedorTarjeta === 'TRANSBANK' ? 'bg-blue-100 border-blue-500' : 'bg-white'}`}
+                    onClick={() => setProveedorTarjeta('TRANSBANK')}
+                  >
+                    Transbank
+                  </button>
+                </div>
+              </div>
+            )}
 
             {metodoPago === 'EFECTIVO' && (
               <div className="mb-6">

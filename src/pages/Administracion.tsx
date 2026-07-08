@@ -25,7 +25,6 @@ interface ProductoMasVendido {
   total: number;
 }
 
-// ✨ NUEVA INTERFAZ: Para manejar las categorías
 interface Categoria {
   id: number;
   nombre: string;
@@ -37,8 +36,9 @@ export const Administracion = () => {
   
   const usuarioRol = (localStorage.getItem('usuarioRol') || 'vendedor').toLowerCase().trim();
   const usuarioNombre = localStorage.getItem('usuarioNombre') || 'Usuario';
+  // ✨ NUEVO: Obtenemos el ID de la empresa
+  const empresaId = localStorage.getItem('empresaId') || '1';
 
-  // Estados anteriores
   const [metricas, setMetricas] = useState<Metricas>({ ventasHoy: 0, ivaMes: 0, ticketPromedio: 0, costoInventario: 0 });
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [notas, setNotas] = useState<Nota[]>([]);
@@ -48,7 +48,6 @@ export const Administracion = () => {
   const [masVendidos, setMasVendidos] = useState<ProductoMasVendido[]>([]);
   const [periodo, setPeriodo] = useState<'dia' | 'semana' | 'mes'>('dia');
 
-  // ✨ NUEVOS ESTADOS: Para el CRUD de categorías
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [nuevaCategoria, setNuevaCategoria] = useState('');
   const [editandoCategoriaId, setEditandoCategoriaId] = useState<number | null>(null);
@@ -57,8 +56,17 @@ export const Administracion = () => {
   // 🛡️ Protección de Ruta
   useEffect(() => {
     if (usuarioRol !== 'admin') {
-      alert("Acceso denegado. Solo administradores.");
-      navigate('/'); 
+      Swal.fire({
+        icon: 'info',
+        title: 'Acceso Restringido',
+        text: 'Hola. Esta sección contiene información sensible y es exclusiva para administradores. Te redirigiremos a la pantalla principal.',
+        confirmButtonColor: '#3B82F6', // Azul amigable
+        confirmButtonText: 'Entendido',
+        allowOutsideClick: false, // Evita que lo cierren haciendo clic afuera
+        allowEscapeKey: false // Evita que lo cierren con ESC
+      }).then(() => {
+        navigate('/'); 
+      });
     }
   }, [usuarioRol, navigate]);
 
@@ -69,12 +77,12 @@ export const Administracion = () => {
     const cargarDatosPanel = async () => {
       try {
         setCargando(true);
-        // Agregamos la carga de categorías a la carga masiva inicial
+        // ✨ ACTUALIZADO: Enviamos el empresaId en las peticiones GET
         const [resMetricas, resEmpleados, resNotas, resCategorias] = await Promise.all([
-          fetch(`${API_URL}/admin/metricas`),
-          fetch(`${API_URL}/usuarios`),
-          fetch(`${API_URL}/admin/notas`),
-          fetch(`${API_URL}/categorias`) 
+          fetch(`${API_URL}/admin/metricas?empresaId=${empresaId}`),
+          fetch(`${API_URL}/usuarios?empresaId=${empresaId}`),
+          fetch(`${API_URL}/notas?empresaId=${empresaId}`),
+          fetch(`${API_URL}/categorias?empresaId=${empresaId}`) 
         ]);
 
         if (resMetricas.ok) setMetricas(await resMetricas.json());
@@ -89,7 +97,7 @@ export const Administracion = () => {
     };
 
     cargarDatosPanel();
-  }, [API_URL, usuarioRol]);
+  }, [API_URL, usuarioRol, empresaId]);
 
   // 🔄 Recarga del Top 5
   useEffect(() => {
@@ -97,7 +105,8 @@ export const Administracion = () => {
 
     const cargarMasVendidos = async () => {
       try {
-        const res = await fetch(`${API_URL}/admin/productos-mas-vendidos?periodo=${periodo}`);
+        // ✨ ACTUALIZADO: Agregamos el empresaId a la consulta
+        const res = await fetch(`${API_URL}/admin/productos-mas-vendidos?periodo=${periodo}&empresaId=${empresaId}`);
         if (res.ok) {
           setMasVendidos(await res.json());
         }
@@ -107,34 +116,42 @@ export const Administracion = () => {
     };
 
     cargarMasVendidos();
-  }, [API_URL, periodo, usuarioRol]);
+  }, [API_URL, periodo, usuarioRol, empresaId]);
 
+  // 📝 Operaciones de notas
   // 📝 Operaciones de notas
   const agregarNota = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevaNota.trim()) return;
     try {
-      const res = await fetch(`${API_URL}/admin/notas`, {
+      // 👇 CORREGIDO: Cambiado de /admin/notas a /api/notas
+      const res = await fetch(`${API_URL}/notas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texto: nuevaNota })
+        body: JSON.stringify({ 
+          texto: nuevaNota,
+          empresa: { id: parseInt(empresaId) } 
+        })
       });
       if (res.ok) {
         setNotas([await res.json(), ...notas]);
         setNuevaNota('');
       }
     } catch (error) {
-      Swal.fire('Error', 'No se pudo guardar la nota', 'error');
+      console.error("Detalle del error:", error); 
+      Swal.fire('Error', 'No se pudo realizar la acción', 'error');
     }
   };
 
   const eliminarNota = async (id: number) => {
     try {
-      if ((await fetch(`${API_URL}/admin/notas/${id}`, { method: 'DELETE' })).ok) {
+      // 👇 CORREGIDO: Cambiado de /admin/notas a /api/notas
+      if ((await fetch(`${API_URL}/notas/${id}`, { method: 'DELETE' })).ok) {
         setNotas(notas.filter(n => n.id !== id));
       }
     } catch (error) {
-      Swal.fire('Error', 'No se pudo eliminar la nota', 'error');
+      console.error("Detalle del error:", error);
+      Swal.fire('Error', 'No se pudo realizar la acción', 'error');
     }
   };
 
@@ -149,7 +166,11 @@ export const Administracion = () => {
       const res = await fetch(`${API_URL}/categorias`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nuevaCategoria })
+        // ✨ ACTUALIZADO: Vinculamos la categoría a la empresa
+        body: JSON.stringify({ 
+          nombre: nuevaCategoria,
+          empresa: { id: parseInt(empresaId) }
+        })
       });
       if (res.ok) {
         const creado = await res.json();
@@ -158,7 +179,8 @@ export const Administracion = () => {
         Swal.fire('¡Creada!', 'La categoría ha sido añadida.', 'success');
       }
     } catch (error) {
-      Swal.fire('Error', 'No se pudo crear la categoría', 'error');
+      console.error("Detalle del error:", error); // ✨ Ahora sí la estamos usando
+      Swal.fire('Error', 'No se pudo realizar la acción', 'error');
     }
   };
 
@@ -173,7 +195,10 @@ export const Administracion = () => {
       const res = await fetch(`${API_URL}/categorias/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: editandoNombre })
+        body: JSON.stringify({ 
+          nombre: editandoNombre,
+          empresa: { id: parseInt(empresaId) }
+        })
       });
       if (res.ok) {
         const actualizado = await res.json();
@@ -183,7 +208,8 @@ export const Administracion = () => {
         Swal.fire('¡Actualizada!', 'Categoría modificada con éxito.', 'success');
       }
     } catch (error) {
-      Swal.fire('Error', 'No se pudo modificar la categoría', 'error');
+      console.error("Detalle del error:", error); // ✨ Ahora sí la estamos usando
+      Swal.fire('Error', 'No se pudo realizar la acción', 'error');
     }
   };
 
@@ -207,17 +233,18 @@ export const Administracion = () => {
         setCategorias(categorias.filter(cat => cat.id !== id));
         Swal.fire('¡Eliminada!', 'Categoría eliminada del registro.', 'success');
       } else {
-        // Captura el error de restricción de integridad del backend de forma amigable
         Swal.fire('Acción Bloqueada', 'No se puede eliminar esta categoría porque actualmente contiene productos registrados en inventario.', 'error');
       }
     } catch (error) {
-      Swal.fire('Error', 'Hubo un error de conexión con el servidor.', 'error');
+      console.error("Detalle del error:", error); // ✨ Ahora sí la estamos usando
+      Swal.fire('Error', 'No se pudo realizar la acción', 'error');
     }
   };
 
   if (usuarioRol !== 'admin') return null; 
   if (cargando) return <div className="text-center mt-20 font-bold text-gray-600 text-xl">Cargando panel de control...</div>;
 
+  // EL RESTO DEL RETURN QUEDA EXACTAMENTE IGUAL...
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       {/* Cabecera */}
@@ -264,7 +291,7 @@ export const Administracion = () => {
               <h2 className="text-xl font-bold text-gray-800">🔥 Productos Más Vendidos</h2>
               <select 
                 value={periodo} 
-                onChange={(e) => setPeriodo(e.target.value as any)}
+                onChange={(e) => setPeriodo(e.target.value as 'dia' | 'semana' | 'mes')}
                 className="bg-gray-50 border border-gray-200 text-gray-700 font-semibold p-2 rounded-xl text-sm outline-none cursor-pointer focus:ring-2 focus:ring-blue-500"
               >
                 <option value="dia">Hoy</option>
@@ -328,7 +355,7 @@ export const Administracion = () => {
             </div>
           </div>
 
-          {/* ✨ NUEVA SECCIÓN EN LA IZQUIERDA: CRUD de Categorías */}
+          {/* CRUD de Categorías */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-xl font-bold text-gray-800 mb-2">📂 Categorías de Productos</h2>
             <p className="text-gray-400 text-xs mb-4">Administra las agrupaciones de la vitrina comercial.</p>

@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 
-
-
 export interface VentaDetalle {
     id: number;
     cantidad: number;
@@ -32,10 +30,15 @@ export const useMovimiento = () => {
         try {
             setLoading(true);
             
-            // Construimos la URL con los parámetros si existen
-            let url = API_URL;
+            // ✨ 1. Obtenemos el ID de la empresa guardado en el localStorage
+            const empresaId = localStorage.getItem('empresaId') || '1';
+
+            // ✨ 2. Iniciamos la URL siempre incluyendo el empresaId obligatorio
+            let url = `${API_URL}?empresaId=${empresaId}`;
+            
+            // Si el usuario seleccionó fechas, las añadimos usando '&'
             if (fechaInicio) {
-                url += `?fechaInicio=${fechaInicio}`;
+                url += `&fechaInicio=${fechaInicio}`;
                 if (fechaFin) {
                     url += `&fechaFin=${fechaFin}`;
                 }
