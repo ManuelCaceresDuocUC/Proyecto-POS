@@ -52,7 +52,7 @@ export const Ventas = () => {
   const [efectivoFisicoDeclarado, setEfectivoFisicoDeclarado] = useState('');
   const [faseCierre, setFaseCierre] = useState<'declaracion' | 'resultado'>('declaracion');
   const [datosCierreCalculados, setDatosCierreCalculados] = useState<ResumenCaja | null>(null);
-  const [cargandoCierre, setCargandoCierre] = useState(false);
+  const [, setCargandoCierre] = useState(false);
 
 
   const { 
