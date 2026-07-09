@@ -40,6 +40,6 @@ jobs:
             docker rm frontend-app || true
             
             # Correr el contenedor mapeando puertos y añadiendo reinicio automático
-            docker run -d -p 80:80 --name frontend-app \
+            docker run -d -p 80:80 -p 443:443 --name frontend-app \
               --restart unless-stopped \
               ${{ secrets.DOCKER_USERNAME }}/mi-frontend:latest
