@@ -39,5 +39,7 @@ jobs:
             docker stop frontend-app || true
             docker rm frontend-app || true
             
-            # Correr el contenedor mapeando el puerto 80 de la EC2 al 80 de Nginx
-            docker run -d -p 80:80 --name frontend-app ${{ secrets.DOCKER_USERNAME }}/mi-frontend:latest
+            # Correr el contenedor mapeando puertos y añadiendo reinicio automático
+            docker run -d -p 80:80 --name frontend-app \
+              --restart unless-stopped \
+              ${{ secrets.DOCKER_USERNAME }}/mi-frontend:latest
