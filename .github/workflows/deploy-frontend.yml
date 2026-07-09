@@ -42,4 +42,5 @@ jobs:
             # Correr el contenedor mapeando puertos y añadiendo reinicio automático
             docker run -d -p 80:80 -p 443:443 --name frontend-app \
               --restart unless-stopped \
+              -v /etc/letsencrypt:/etc/letsencrypt \
               ${{ secrets.DOCKER_USERNAME }}/mi-frontend:latest
