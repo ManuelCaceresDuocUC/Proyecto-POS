@@ -12,8 +12,10 @@ FROM nginx:alpine
 # Copia el resultado de la compilación de la etapa anterior
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# IMPORTANTE: Copia tu configuración personalizada de Nginx
+# Copia tu configuración personalizada de Nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+# MODIFICADO: Ahora exponemos el puerto 80 y el 443 para HTTPS
+EXPOSE 80 443
+
 CMD ["nginx", "-g", "daemon off;"]
