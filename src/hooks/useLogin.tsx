@@ -17,6 +17,7 @@ export const useLogin = () => {
     const eliminarUsuario = (usuario: string) => {
         setUsuarios(usuarios.filter(p => p.usuario !== usuario));
     };
+    
     const agregarUsuario = (nuevo: Usuario) => {
         setUsuarios([...usuarios, nuevo]);
     };
@@ -60,17 +61,24 @@ export const useLogin = () => {
                     showConfirmButton: false
                 });
 
-                // Mantenemos tu guardado original por si acaso
+                // Guardado de sesión original
                 localStorage.setItem('user_session', JSON.stringify(usuarioLogeado));
                 
-                // ✨ NUEVO: Guardamos los datos desglosados para que Administracion.tsx los entienda
-                localStorage.setItem('usuarioRol', usuarioLogeado.rol || 'vendedor');
+                // Guardado de datos desglosados
+                const rolUsuario = usuarioLogeado.rol || 'vendedor';
+                localStorage.setItem('usuarioRol', rolUsuario);
                 localStorage.setItem('usuarioNombre', usuarioLogeado.usuario);
                 localStorage.setItem('usuarioId', usuarioLogeado.id?.toString() || '1');
                 const idEmpresa = usuarioLogeado.empresa?.id || 1;
                 localStorage.setItem('empresaId', idEmpresa.toString());
 
-                navigate('/');
+                // ✨ CORRECCIÓN: Redirección inteligente según el rol (evita mandarlos al Landing '/')
+                if (rolUsuario === 'administrador' || rolUsuario === 'admin') {
+                    navigate('/administracion');
+                } else {
+                    navigate('/pos');
+                }
+
             } else {
                 throw new Error("Credenciales inválidas");
             }

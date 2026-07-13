@@ -36,7 +36,6 @@ export const Administracion = () => {
   
   const usuarioRol = (localStorage.getItem('usuarioRol') || 'vendedor').toLowerCase().trim();
   const usuarioNombre = localStorage.getItem('usuarioNombre') || 'Usuario';
-  // ✨ NUEVO: Obtenemos el ID de la empresa
   const empresaId = localStorage.getItem('empresaId') || '1';
 
   const [metricas, setMetricas] = useState<Metricas>({ ventasHoy: 0, ivaMes: 0, ticketPromedio: 0, costoInventario: 0 });
@@ -53,31 +52,28 @@ export const Administracion = () => {
   const [editandoCategoriaId, setEditandoCategoriaId] = useState<number | null>(null);
   const [editandoNombre, setEditandoNombre] = useState('');
 
-  // 🛡️ Protección de Ruta
   useEffect(() => {
     if (usuarioRol !== 'admin') {
       Swal.fire({
         icon: 'info',
         title: 'Acceso Restringido',
-        text: 'Hola. Esta sección contiene información sensible y es exclusiva para administradores. Te redirigiremos a la pantalla principal.',
-        confirmButtonColor: '#3B82F6', // Azul amigable
+        text: 'Esta sección contiene información confidencial y es de acceso exclusivo para administradores. Será redirigido al panel principal.',
+        confirmButtonColor: '#1E293B',
         confirmButtonText: 'Entendido',
-        allowOutsideClick: false, // Evita que lo cierren haciendo clic afuera
-        allowEscapeKey: false // Evita que lo cierren con ESC
+        allowOutsideClick: false,
+        allowEscapeKey: false
       }).then(() => {
         navigate('/'); 
       });
     }
   }, [usuarioRol, navigate]);
 
-  // 🔄 Carga masiva de datos estáticos iniciales
   useEffect(() => {
     if (usuarioRol !== 'admin') return;
 
     const cargarDatosPanel = async () => {
       try {
         setCargando(true);
-        // ✨ ACTUALIZADO: Enviamos el empresaId en las peticiones GET
         const [resMetricas, resEmpleados, resNotas, resCategorias] = await Promise.all([
           fetch(`${API_URL}/admin/metricas?empresaId=${empresaId}`),
           fetch(`${API_URL}/usuarios?empresaId=${empresaId}`),
@@ -99,32 +95,27 @@ export const Administracion = () => {
     cargarDatosPanel();
   }, [API_URL, usuarioRol, empresaId]);
 
-  // 🔄 Recarga del Top 5
   useEffect(() => {
     if (usuarioRol !== 'admin') return;
 
     const cargarMasVendidos = async () => {
       try {
-        // ✨ ACTUALIZADO: Agregamos el empresaId a la consulta
         const res = await fetch(`${API_URL}/admin/productos-mas-vendidos?periodo=${periodo}&empresaId=${empresaId}`);
         if (res.ok) {
           setMasVendidos(await res.json());
         }
       } catch (error) {
-        console.error("Error al cargar los más vendidos", error);
+        console.error("Error al cargar los productos más vendidos", error);
       }
     };
 
     cargarMasVendidos();
   }, [API_URL, periodo, usuarioRol, empresaId]);
 
-  // 📝 Operaciones de notas
-  // 📝 Operaciones de notas
   const agregarNota = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevaNota.trim()) return;
     try {
-      // 👇 CORREGIDO: Cambiado de /admin/notas a /api/notas
       const res = await fetch(`${API_URL}/notas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -139,25 +130,20 @@ export const Administracion = () => {
       }
     } catch (error) {
       console.error("Detalle del error:", error); 
-      Swal.fire('Error', 'No se pudo realizar la acción', 'error');
+      Swal.fire('Error', 'No se pudo procesar la solicitud.', 'error');
     }
   };
 
   const eliminarNota = async (id: number) => {
     try {
-      // 👇 CORREGIDO: Cambiado de /admin/notas a /api/notas
       if ((await fetch(`${API_URL}/notas/${id}`, { method: 'DELETE' })).ok) {
         setNotas(notas.filter(n => n.id !== id));
       }
     } catch (error) {
       console.error("Detalle del error:", error);
-      Swal.fire('Error', 'No se pudo realizar la acción', 'error');
+      Swal.fire('Error', 'No se pudo procesar la solicitud.', 'error');
     }
   };
-
-  // ==========================================
-  // ✨ NUEVAS ACCIONES: CRUD DE CATEGORÍAS
-  // ==========================================
 
   const agregarCategoria = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,7 +152,6 @@ export const Administracion = () => {
       const res = await fetch(`${API_URL}/categorias`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ✨ ACTUALIZADO: Vinculamos la categoría a la empresa
         body: JSON.stringify({ 
           nombre: nuevaCategoria,
           empresa: { id: parseInt(empresaId) }
@@ -176,11 +161,11 @@ export const Administracion = () => {
         const creado = await res.json();
         setCategorias([...categorias, creado]);
         setNuevaCategoria('');
-        Swal.fire('¡Creada!', 'La categoría ha sido añadida.', 'success');
+        Swal.fire('Confirmación', 'La categoría ha sido registrada correctamente.', 'success');
       }
     } catch (error) {
-      console.error("Detalle del error:", error); // ✨ Ahora sí la estamos usando
-      Swal.fire('Error', 'No se pudo realizar la acción', 'error');
+      console.error("Detalle del error:", error);
+      Swal.fire('Error', 'No se pudo procesar la solicitud.', 'error');
     }
   };
 
@@ -205,23 +190,23 @@ export const Administracion = () => {
         setCategorias(categorias.map(cat => cat.id === id ? actualizado : cat));
         setEditandoCategoriaId(null);
         setEditandoNombre('');
-        Swal.fire('¡Actualizada!', 'Categoría modificada con éxito.', 'success');
+        Swal.fire('Confirmación', 'La categoría ha sido actualizada correctamente.', 'success');
       }
     } catch (error) {
-      console.error("Detalle del error:", error); // ✨ Ahora sí la estamos usando
-      Swal.fire('Error', 'No se pudo realizar la acción', 'error');
+      console.error("Detalle del error:", error);
+      Swal.fire('Error', 'No se pudo procesar la solicitud.', 'error');
     }
   };
 
   const eliminarCategoria = async (id: number) => {
     const result = await Swal.fire({
-      title: '¿Estás seguro de eliminar?',
-      text: "Si esta categoría tiene productos asociados, el sistema bloqueará la acción por seguridad.",
+      title: '¿Confirmar eliminación?',
+      text: "Si la categoría posee productos vinculados, el sistema impedirá su eliminación por seguridad del inventario.",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#EF4444',
-      cancelButtonColor: '#6B7280',
-      confirmButtonText: 'Sí, eliminar',
+      confirmButtonColor: '#DC2626',
+      cancelButtonColor: '#64748B',
+      confirmButtonText: 'Confirmar',
       cancelButtonText: 'Cancelar'
     });
 
@@ -231,119 +216,109 @@ export const Administracion = () => {
       const res = await fetch(`${API_URL}/categorias/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setCategorias(categorias.filter(cat => cat.id !== id));
-        Swal.fire('¡Eliminada!', 'Categoría eliminada del registro.', 'success');
+        Swal.fire('Confirmación', 'Categoría eliminada del registro.', 'success');
       } else {
-        Swal.fire('Acción Bloqueada', 'No se puede eliminar esta categoría porque actualmente contiene productos registrados en inventario.', 'error');
+        Swal.fire('Acción Denedaga', 'No es posible eliminar esta categoría porque contiene productos registrados en el inventario actual.', 'error');
       }
     } catch (error) {
-      console.error("Detalle del error:", error); // ✨ Ahora sí la estamos usando
-      Swal.fire('Error', 'No se pudo realizar la acción', 'error');
+      console.error("Detalle del error:", error);
+      Swal.fire('Error', 'No se pudo procesar la solicitud.', 'error');
     }
   };
 
   if (usuarioRol !== 'admin') return null; 
-  if (cargando) return <div className="text-center mt-20 font-bold text-gray-600 text-xl">Cargando panel de control...</div>;
+  if (cargando) return <div className="text-center mt-20 font-medium text-slate-600 text-sm tracking-wide uppercase">Cargando panel de control...</div>;
 
-  // EL RESTO DEL RETURN QUEDA EXACTAMENTE IGUAL...
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      {/* Cabecera */}
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+    <div className="min-h-screen bg-slate-50 p-8 font-sans text-slate-800">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-4xl font-black text-gray-800 tracking-tight">Panel de Administración</h1>
-          <p className="text-gray-500 font-medium mt-1">Hola {usuarioNombre}, este es el resumen general de tu negocio</p>
+          <h1 className="text-3xl font-semibold text-slate-900 tracking-tight">Panel de Administración</h1>
+          <p className="text-slate-500 text-sm mt-1">Usuario: {usuarioNombre} | Resumen de gestión comercial</p>
         </div>
-        <Link to="/">
-          <button className="bg-white border-2 border-gray-200 text-gray-700 hover:bg-gray-100 font-bold py-2 px-6 rounded-xl shadow-sm transition-colors">
-            🏠 Volver al Punto de Venta
+        <Link to="/home">
+          <button className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium py-2 px-5 rounded text-sm transition-colors shadow-sm">
+            Volver al Punto de Venta
           </button>
         </Link>
       </div>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* COLUMNA IZQUIERDA */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="text-gray-500 font-bold mb-1">Ventas de Hoy</h3>
-              <p className="text-3xl font-black text-green-600">${metricas.ventasHoy.toLocaleString('es-CL')}</p>
+            <div className="bg-white p-6 rounded shadow-sm border border-slate-200">
+              <h3 className="text-slate-500 font-medium text-xs uppercase tracking-wider mb-1">Ventas del Día</h3>
+              <p className="text-2xl font-semibold text-slate-900">${metricas.ventasHoy.toLocaleString('es-CL')}</p>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="text-gray-500 font-bold mb-1">IVA Acumulado (Mes)</h3>
-              <p className="text-3xl font-black text-blue-600">${metricas.ivaMes.toLocaleString('es-CL')}</p>
+            <div className="bg-white p-6 rounded shadow-sm border border-slate-200">
+              <h3 className="text-slate-500 font-medium text-xs uppercase tracking-wider mb-1">IVA Acumulado (Mes)</h3>
+              <p className="text-2xl font-semibold text-slate-900">${metricas.ivaMes.toLocaleString('es-CL')}</p>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="text-gray-500 font-bold mb-1">Ticket Promedio</h3>
-              <p className="text-3xl font-black text-gray-800">${metricas.ticketPromedio.toLocaleString('es-CL')}</p>
+            <div className="bg-white p-6 rounded shadow-sm border border-slate-200">
+              <h3 className="text-slate-500 font-medium text-xs uppercase tracking-wider mb-1">Ticket Promedio</h3>
+              <p className="text-2xl font-semibold text-slate-900">${metricas.ticketPromedio.toLocaleString('es-CL')}</p>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <h3 className="text-gray-500 font-bold mb-1">Capital en Inventario</h3>
-              <p className="text-3xl font-black text-purple-600">${metricas.costoInventario.toLocaleString('es-CL')}</p>
+            <div className="bg-white p-6 rounded shadow-sm border border-slate-200">
+              <h3 className="text-slate-500 font-medium text-xs uppercase tracking-wider mb-1">Capital en Inventario</h3>
+              <p className="text-2xl font-semibold text-slate-900">${metricas.costoInventario.toLocaleString('es-CL')}</p>
             </div>
           </div>
 
-          {/* Productos Más Vendidos */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800">🔥 Productos Más Vendidos</h2>
+          <div className="bg-white rounded shadow-sm border border-slate-200 p-6">
+            <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+              <h2 className="text-base font-semibold text-slate-800 uppercase tracking-wide">Productos Con Mayor Demanda</h2>
               <select 
                 value={periodo} 
                 onChange={(e) => setPeriodo(e.target.value as 'dia' | 'semana' | 'mes')}
-                className="bg-gray-50 border border-gray-200 text-gray-700 font-semibold p-2 rounded-xl text-sm outline-none cursor-pointer focus:ring-2 focus:ring-blue-500"
+                className="bg-slate-50 border border-slate-300 text-slate-700 font-medium p-2 rounded text-sm outline-none cursor-pointer focus:border-slate-500"
               >
-                <option value="dia">Hoy</option>
+                <option value="dia">Día en curso</option>
                 <option value="semana">Últimos 7 días</option>
-                <option value="mes">Este Mes</option>
+                <option value="mes">Mes actual</option>
               </select>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               {masVendidos.map((prod, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100 text-sm">
                   <div className="flex items-center gap-3">
-                    <span className={`w-7 h-7 flex items-center justify-center font-bold text-sm rounded-full ${
-                      index === 0 ? 'bg-amber-100 text-amber-700' : 
-                      index === 1 ? 'bg-slate-200 text-slate-700' : 
-                      index === 2 ? 'bg-orange-100 text-orange-700' : 'bg-gray-200 text-gray-600'
-                    }`}>
+                    <span className="w-6 h-6 flex items-center justify-center font-semibold text-xs rounded bg-slate-200 text-slate-700">
                       {index + 1}
                     </span>
-                    <span className="font-semibold text-gray-800">{prod.nombre}</span>
+                    <span className="font-medium text-slate-800">{prod.nombre}</span>
                   </div>
-                  <span className="bg-blue-50 text-blue-700 font-black px-3 py-1 rounded-lg text-sm">
-                    {prod.total} unds
+                  <span className="bg-slate-200 text-slate-800 font-semibold px-2.5 py-0.5 rounded text-xs">
+                    {prod.total} unds.
                   </span>
                 </div>
               ))}
               {masVendidos.length === 0 && (
-                <p className="text-center text-gray-400 text-sm my-4">No hay registros de ventas en este rango.</p>
+                <p className="text-center text-slate-400 text-sm my-4">No existen registros para el período seleccionado.</p>
               )}
             </div>
           </div>
 
-          {/* Gestión de Usuarios */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">👥 Equipo de Trabajo</h2>
+          <div className="bg-white rounded shadow-sm border border-slate-200 p-6">
+            <h2 className="text-base font-semibold text-slate-800 uppercase tracking-wide mb-4 border-b border-slate-100 pb-3">Personal del Sistema</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                   <tr>
-                    <th className="p-3 font-bold">ID</th>
-                    <th className="p-3 font-bold">Nombre de Usuario</th>
-                    <th className="p-3 font-bold">Rol asignado</th>
+                    <th className="p-3">ID</th>
+                    <th className="p-3">Nombre de Usuario</th>
+                    <th className="p-3">Rol Asignado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-slate-100">
                   {empleados.map(emp => (
-                    <tr key={emp.id} className="hover:bg-gray-50">
-                      <td className="p-3 text-gray-500">#{emp.id}</td>
-                      <td className="p-3 font-medium text-gray-800">{emp.usuario}</td>
+                    <tr key={emp.id} className="hover:bg-slate-50">
+                      <td className="p-3 text-slate-500 font-mono">#{emp.id}</td>
+                      <td className="p-3 font-medium text-slate-800">{emp.usuario}</td>
                       <td className="p-3">
-                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                          emp.rol === 'admin' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600'
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                          emp.rol === 'admin' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600'
                         }`}>
                           {emp.rol.toUpperCase()}
                         </span>
@@ -355,48 +330,46 @@ export const Administracion = () => {
             </div>
           </div>
 
-          {/* CRUD de Categorías */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">📂 Categorías de Productos</h2>
-            <p className="text-gray-400 text-xs mb-4">Administra las agrupaciones de la vitrina comercial.</p>
+          <div className="bg-white rounded shadow-sm border border-slate-200 p-6">
+            <h2 className="text-base font-semibold text-slate-800 uppercase tracking-wide mb-1">Categorías de Productos</h2>
+            <p className="text-slate-500 text-xs mb-4 border-b border-slate-100 pb-3">Gestión de las agrupaciones del catálogo comercial.</p>
             
-            {/* Formulario de creación rápida */}
             <form onSubmit={agregarCategoria} className="flex gap-2 mb-6">
               <input 
                 type="text" 
-                placeholder="Ej. Sándwiches, Líquidos, Postres..." 
+                placeholder="Nombre de la nueva categoría..." 
                 value={nuevaCategoria}
                 onChange={(e) => setNuevaCategoria(e.target.value)}
-                className="flex-1 p-3 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+                className="flex-1 p-2.5 rounded border border-slate-300 bg-white focus:outline-none focus:border-slate-500 text-sm"
               />
-              <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 rounded-xl text-sm transition-colors shadow-sm">
-                ➕ Agregar
+              <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white font-medium px-4 rounded text-sm transition-colors">
+                Agregar Categoría
               </button>
             </form>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
                   <tr>
-                    <th className="p-3 font-bold w-16">ID</th>
-                    <th className="p-3 font-bold">Nombre de la Categoría</th>
-                    <th className="p-3 font-bold text-right w-36">Acciones</th>
+                    <th className="p-3 w-16">ID</th>
+                    <th className="p-3">Nombre</th>
+                    <th className="p-3 text-right w-36">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-slate-100">
                   {categorias.map(cat => (
-                    <tr key={cat.id} className="hover:bg-gray-50">
-                      <td className="p-3 text-gray-400 font-medium">#{cat.id}</td>
+                    <tr key={cat.id} className="hover:bg-slate-50">
+                      <td className="p-3 text-slate-400 font-mono">#{cat.id}</td>
                       <td className="p-3">
                         {editandoCategoriaId === cat.id ? (
                           <input 
                             type="text" 
                             value={editandoNombre} 
                             onChange={(e) => setEditandoNombre(e.target.value)}
-                            className="w-full p-2 border border-blue-400 rounded-lg text-sm bg-white focus:outline-none font-semibold text-gray-800"
+                            className="w-full p-1.5 border border-slate-400 rounded text-sm bg-white focus:outline-none font-medium text-slate-800"
                           />
                         ) : (
-                          <span className="font-semibold text-gray-800">{cat.nombre}</span>
+                          <span className="font-medium text-slate-800">{cat.nombre}</span>
                         )}
                       </td>
                       <td className="p-3 text-right">
@@ -404,30 +377,30 @@ export const Administracion = () => {
                           <div className="flex justify-end gap-1">
                             <button 
                               onClick={() => guardarEdicion(cat.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded-lg text-xs font-bold transition-colors"
+                              className="bg-slate-800 hover:bg-slate-900 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
                             >
-                              💾 Guardar
+                              Guardar
                             </button>
                             <button 
                               onClick={() => setEditandoCategoriaId(null)}
-                              className="bg-gray-400 hover:bg-gray-500 text-white px-2 py-1 rounded-lg text-xs font-bold transition-colors"
+                              className="bg-slate-400 hover:bg-slate-500 text-white px-2 py-1 rounded text-xs font-medium transition-colors"
                             >
-                              ✕
+                              Cancelar
                             </button>
                           </div>
                         ) : (
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-3">
                             <button 
                               onClick={() => iniciarEdicion(cat)}
-                              className="text-blue-500 hover:text-blue-700 text-sm font-bold transition-colors"
+                              className="text-slate-600 hover:text-slate-900 text-xs font-medium underline transition-colors"
                             >
-                              ✏️ Editar
+                              Editar
                             </button>
                             <button 
                               onClick={() => eliminarCategoria(cat.id)}
-                              className="text-red-500 hover:text-red-700 text-sm font-bold transition-colors"
+                              className="text-red-600 hover:text-red-800 text-xs font-medium underline transition-colors"
                             >
-                              🗑️ Borrar
+                              Eliminar
                             </button>
                           </div>
                         )}
@@ -436,7 +409,7 @@ export const Administracion = () => {
                   ))}
                   {categorias.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="text-center p-6 text-gray-400 text-sm">No hay categorías registradas en el sistema.</td>
+                      <td colSpan={3} className="text-center p-6 text-slate-400 text-sm">No existen categorías registradas en el sistema.</td>
                     </tr>
                   )}
                 </tbody>
@@ -446,37 +419,43 @@ export const Administracion = () => {
 
         </div>
 
-        {/* COLUMNA DERECHA */}
         <div className="space-y-8">
-          {/* Bloc de Notas */}
-          <div className="bg-yellow-50 rounded-2xl shadow-sm border border-yellow-200 p-6 flex flex-col h-100">
-            <h2 className="text-xl font-black text-yellow-800 mb-4 flex items-center gap-2">📌 Notas Administrativas</h2>
+          <div className="bg-white rounded shadow-sm border border-slate-200 p-6 flex flex-col h-full max-h-[500px]">
+            <h2 className="text-base font-semibold text-slate-800 uppercase tracking-wide mb-4 border-b border-slate-100 pb-3">Notas Administrativas</h2>
             <form onSubmit={agregarNota} className="mb-4">
               <input 
                 type="text" 
-                placeholder="Escribe un recado rápido..." 
+                placeholder="Ingresar nuevo registro..." 
                 value={nuevaNota}
                 onChange={(e) => setNuevaNota(e.target.value)}
-                className="w-full p-3 rounded-xl border border-yellow-300 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                className="w-full p-2.5 rounded border border-slate-300 bg-white focus:outline-none focus:border-slate-500 text-sm"
               />
             </form>
-            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
               {notas.map(nota => (
-                <div key={nota.id} className="bg-white p-3 rounded-xl shadow-sm border border-yellow-100 flex justify-between gap-2 group">
-                  <p className="text-sm text-gray-700">{nota.texto}</p>
-                  <button onClick={() => eliminarNota(nota.id)} className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                <div key={nota.id} className="bg-slate-50 p-3 rounded border border-slate-200 flex justify-between items-center gap-2 group text-sm">
+                  <p className="text-slate-700">{nota.texto}</p>
+                  <button 
+                    onClick={() => eliminarNota(nota.id)} 
+                    className="text-slate-400 hover:text-red-600 font-mono text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    [X]
+                  </button>
                 </div>
               ))}
-              {notas.length === 0 && <p className="text-center text-yellow-600 text-sm mt-4">No hay notas pendientes.</p>}
+              {notas.length === 0 && <p className="text-center text-slate-400 text-sm mt-4">Sin notas registradas.</p>}
             </div>
           </div>
 
-          {/* Alertas */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">⚠️ Alertas del Sistema</h2>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-3 p-3 bg-red-50 text-red-700 rounded-xl border border-red-100 text-sm font-medium"><span>🔴</span> Hay 5 productos con stock crítico (bajo 5 unidades).</li>
-              <li className="flex items-start gap-3 p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-100 text-sm font-medium"><span>📘</span> Recuerda que hoy es cierre de mes, exporta el reporte para el contador.</li>
+          <div className="bg-white rounded shadow-sm border border-slate-200 p-6">
+            <h2 className="text-base font-semibold text-slate-800 uppercase tracking-wide mb-4 border-b border-slate-100 pb-3">Notificaciones del Sistema</h2>
+            <ul className="space-y-2 text-sm">
+              <li className="p-3 bg-slate-50 text-slate-700 rounded border border-slate-200 font-medium">
+                Alerta de inventario: Existen 5 productos con stock crítico inferior al límite permitido.
+              </li>
+              <li className="p-3 bg-slate-50 text-slate-700 rounded border border-slate-200 font-medium">
+                Recordatorio contable: Cierre de mes en curso. Recuerde exportar los reportes financieros para auditoría.
+              </li>
             </ul>
           </div>
         </div>

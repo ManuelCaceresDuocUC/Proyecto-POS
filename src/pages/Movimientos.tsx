@@ -1,19 +1,17 @@
 import { useState } from "react";
 import { useMovimiento, type Movimiento } from "../hooks/useMovimiento"; 
 
-// 1. Agregamos 'semana' y 'mes' a los tipos permitidos
 type TipoFiltro = 'hoy' | 'dia' | 'periodo' | 'semana' | 'mes';
 
-// Utilidades para calcular las fechas automáticamente
 const obtenerFechasSemana = () => {
     const hoy = new Date();
-    const diaSemana = hoy.getDay() || 7; // Convertir domingo (0) a 7 para lógica Lunes-Domingo
+    const diaSemana = hoy.getDay() || 7; 
     
     const inicio = new Date(hoy);
-    inicio.setDate(hoy.getDate() - diaSemana + 1); // Lunes
+    inicio.setDate(hoy.getDate() - diaSemana + 1); 
     
     const fin = new Date(inicio);
-    fin.setDate(inicio.getDate() + 6); // Domingo
+    fin.setDate(inicio.getDate() + 6); 
 
     return {
         inicio: inicio.toISOString().split('T')[0],
@@ -23,8 +21,8 @@ const obtenerFechasSemana = () => {
 
 const obtenerFechasMes = () => {
     const hoy = new Date();
-    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1); // Día 1 del mes actual
-    const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0); // Último día del mes actual
+    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1); 
+    const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0); 
 
     return {
         inicio: inicio.toISOString().split('T')[0],
@@ -44,119 +42,118 @@ export const Movimientos = () => {
         if (tipoFiltro === 'hoy') {
             cargarMovimientos();
         } else if (tipoFiltro === 'dia') {
-            if (!fecha1) return alert("Selecciona un día");
+            if (!fecha1) return alert("Debe seleccionar una fecha válida.");
             cargarMovimientos(fecha1);
         } else if (tipoFiltro === 'periodo') {
-            if (!fecha1 || !fecha2) return alert("Selecciona ambas fechas");
+            if (!fecha1 || !fecha2) return alert("Debe seleccionar la fecha de inicio y de término.");
             cargarMovimientos(fecha1, fecha2);
         } else if (tipoFiltro === 'semana') {
-            // 2. Calculamos las fechas y las enviamos al hook
             const { inicio, fin } = obtenerFechasSemana();
             cargarMovimientos(inicio, fin);
         } else if (tipoFiltro === 'mes') {
-            // 3. Calculamos las fechas y las enviamos al hook
             const { inicio, fin } = obtenerFechasMes();
             cargarMovimientos(inicio, fin);
         }
     };
 
     return (
-        <div className="p-8">
-            <h1 className='text-4xl font-black text-gray-800 mb-8 tracking-tight'>Ventas y Análisis</h1>
+        <div className="p-8 bg-slate-50 min-h-screen font-sans text-slate-800">
+            <div className="mb-8 border-b border-slate-200 pb-4">
+              <h1 className='text-3xl font-semibold text-slate-900 tracking-tight'>Registro de Movimientos y Ventas</h1>
+              <p className="text-slate-500 text-sm mt-1">Histórico general y análisis de transacciones.</p>
+            </div>
 
-            {/* SECCIÓN DE FILTROS */}
-            <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 mb-8 flex flex-col md:flex-row gap-4 items-end max-w-6xl">
+            <div className="bg-white p-4 rounded shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row gap-4 items-end max-w-6xl text-sm">
                 
                 <div className="flex flex-col gap-1">
-                    <label className="font-bold text-gray-700 text-sm">Tipo de búsqueda:</label>
+                    <label className="font-semibold text-slate-700 text-xs uppercase tracking-wider">Criterio de filtro:</label>
                     <select 
                         value={tipoFiltro} 
                         onChange={(e) => setTipoFiltro(e.target.value as TipoFiltro)}
-                        className="border border-gray-300 rounded-lg p-2 bg-gray-50 focus:ring-2 focus:ring-blue-500"
+                        className="border border-slate-300 rounded p-2 bg-slate-50 focus:border-slate-500 outline-none"
                     >
-                        <option value="hoy">Ventas de Hoy</option>
-                        <option value="dia">Un día específico</option>
-                        <option value="semana">Esta semana</option> {/* NUEVO */}
-                        <option value="mes">Este mes</option>       {/* NUEVO */}
-                        <option value="periodo">Un período manual</option>
+                        <option value="hoy">Día en curso</option>
+                        <option value="dia">Fecha específica</option>
+                        <option value="semana">Semana actual</option> 
+                        <option value="mes">Mes en curso</option>       
+                        <option value="periodo">Rango de fechas manual</option>
                     </select>
                 </div>
 
-                {/* 4. Ocultamos los inputs de fecha si eligen 'semana' o 'mes' (solo se muestran para dia y periodo) */}
                 {(tipoFiltro === 'dia' || tipoFiltro === 'periodo') && (
                     <div className="flex flex-col gap-1">
-                        <label className="font-bold text-gray-700 text-sm">
-                            {tipoFiltro === 'periodo' ? 'Desde:' : 'Selecciona el día:'}
+                        <label className="font-semibold text-slate-700 text-xs uppercase tracking-wider">
+                            {tipoFiltro === 'periodo' ? 'Fecha Inicio:' : 'Seleccione Fecha:'}
                         </label>
                         <input 
                             type="date" 
                             value={fecha1} 
                             onChange={(e) => setFecha1(e.target.value)}
-                            className="border border-gray-300 rounded-lg p-2 bg-gray-50 focus:ring-2 focus:ring-blue-500"
+                            className="border border-slate-300 rounded p-2 bg-slate-50 focus:border-slate-500 outline-none"
                         />
                     </div>
                 )}
 
                 {tipoFiltro === 'periodo' && (
                     <div className="flex flex-col gap-1">
-                        <label className="font-bold text-gray-700 text-sm">Hasta:</label>
+                        <label className="font-semibold text-slate-700 text-xs uppercase tracking-wider">Fecha Término:</label>
                         <input 
                             type="date" 
                             value={fecha2} 
                             onChange={(e) => setFecha2(e.target.value)}
-                            className="border border-gray-300 rounded-lg p-2 bg-gray-50 focus:ring-2 focus:ring-blue-500"
+                            className="border border-slate-300 rounded p-2 bg-slate-50 focus:border-slate-500 outline-none"
                         />
                     </div>
                 )}
 
                 <button 
                     onClick={aplicarFiltro}
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow transition-colors h-10.5"
+                    className="bg-slate-800 hover:bg-slate-900 text-white font-medium py-2 px-6 rounded shadow-sm transition-colors h-9 text-sm"
                 >
-                    Buscar
+                    Aplicar Filtro
                 </button>
             </div>
 
-            {loading && <div className="p-10 text-center font-bold text-blue-600">Cargando movimientos...</div>}
+            {loading && <div className="p-10 text-center font-medium text-slate-600 text-sm tracking-wide uppercase">Cargando registros de transacciones...</div>}
             
             {error && (
-                <div className="p-10 text-center">
-                    <p className="text-red-500 font-bold underline">Error al cargar datos:</p>
-                    <p className="text-gray-600">{error}</p>
+                <div className="p-8 text-center bg-white border border-red-200 rounded max-w-6xl">
+                    <p className="text-red-700 font-semibold text-sm uppercase tracking-wide">Error en la consulta de datos:</p>
+                    <p className="text-slate-600 text-sm mt-1">{error}</p>
                 </div>
             )}
 
             {!loading && !error && (
                 <div className='flex flex-col lg:flex-row gap-8 items-start w-full max-w-6xl'>
-                    <div className="flex-1 overflow-hidden rounded-lg shadow-md border border-gray-200 bg-white w-full">
+                    <div className="flex-1 overflow-hidden rounded shadow-sm border border-slate-200 bg-white w-full">
                         {movimientos.length === 0 ? (
-                            <div className="p-10 text-center text-gray-500 font-medium">No hay ventas en este rango de fechas.</div>
+                            <div className="p-10 text-center text-slate-400 font-medium text-sm">No existen transacciones registradas en el período seleccionado.</div>
                         ) : (
-                            <table className='w-full text-center'>
-                                <thead className='bg-gray-200 border-b-2 border-gray-300 font-bold text-gray-700'>
+                            <table className='w-full text-left text-sm'>
+                                <thead className='bg-slate-100 border-b border-slate-200 font-semibold text-slate-600 text-xs uppercase tracking-wider'>
                                     <tr>
-                                        <th className="px-6 py-3">ID</th>
-                                        <th className="px-6 py-3">Total</th>
-                                        <th className="px-6 py-3">Método</th>
-                                        <th className="px-6 py-3">Fecha</th>
-                                        <th className="px-6 py-3">Productos</th>
+                                        <th className="px-6 py-3.5">ID</th>
+                                        <th className="px-6 py-3.5">Monto Total</th>
+                                        <th className="px-6 py-3.5">Medio de Pago</th>
+                                        <th className="px-6 py-3.5">Fecha y Hora</th>
+                                        <th className="px-6 py-3.5 text-center">Detalle Operación</th>
                                     </tr>
                                 </thead>
-                                <tbody className='divide-y divide-gray-200'>
+                                <tbody className='divide-y divide-slate-100'>
                                     {movimientos.map((mov) => (
-                                        <tr key={mov.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className='px-6 py-4'>#{mov.id}</td>
-                                            <td className='px-6 py-4 font-bold text-green-600'>${mov.total.toLocaleString()}</td>
-                                            <td className='px-6 py-4 font-medium'>{mov.metodoPago}</td>
-                                            <td className='px-6 py-4 text-gray-500'>
+                                        <tr key={mov.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className='px-6 py-3.5 font-mono text-slate-500'>#{mov.id}</td>
+                                            <td className='px-6 py-3.5 font-semibold text-slate-900'>${mov.total.toLocaleString()}</td>
+                                            <td className='px-6 py-3.5 font-medium text-slate-700'>{mov.metodoPago}</td>
+                                            <td className='px-6 py-3.5 text-slate-500'>
                                                 {new Date(mov.fechaHora).toLocaleString()}
                                             </td>
-                                            <td className='px-6 py-4'>
+                                            <td className='px-6 py-3.5 text-center'>
                                                 <button 
                                                     onClick={() => setVentaSeleccionada(mov)}
-                                                    className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1 rounded-lg border border-blue-200 transition-colors flex items-center gap-2 mx-auto"
+                                                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1 rounded border border-slate-300 transition-colors font-medium text-xs"
                                                 >
-                                                    Ver detalle {mov.detalles?.length || 0} prod.
+                                                    Visualizar ({mov.detalles?.length || 0} ítems)
                                                 </button>
                                             </td>
                                         </tr>
@@ -168,26 +165,25 @@ export const Movimientos = () => {
                 </div>
             )}
 
-            {/* MODAL DETALLE */}
             {ventaSeleccionada && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                        <div className="bg-gray-800 p-4 text-white flex justify-between items-center">
-                            <h3 className="font-bold">Detalle de Venta #{ventaSeleccionada.id}</h3>
-                            <button onClick={() => setVentaSeleccionada(null)} className="text-2xl">&times;</button>
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded shadow-lg border border-slate-200 w-full max-w-md overflow-hidden text-sm">
+                        <div className="bg-slate-800 p-4 text-white flex justify-between items-center">
+                            <h3 className="font-semibold text-base">Detalle de Transacción #{ventaSeleccionada.id}</h3>
+                            <button onClick={() => setVentaSeleccionada(null)} className="font-mono text-lg font-bold leading-none">&times;</button>
                         </div>
                         
-                        <div className="p-4">
-                            <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                        <div className="p-6">
+                            <div className="space-y-3 max-h-[60vh] overflow-y-auto divide-y divide-slate-100 pr-1">
                                 {ventaSeleccionada.detalles.map((det) => (
-                                    <div key={det.id} className="flex justify-between items-center border-b pb-2">
+                                    <div key={det.id} className="flex justify-between items-center pt-2 first:pt-0">
                                         <div className="text-left">
-                                            <p className="font-bold text-gray-800">{det.producto.descripcion}</p>
-                                            <p className="text-xs text-gray-500">
-                                                {det.cantidad} unid. x ${det.precioUnitario}
+                                            <p className="font-medium text-slate-800">{det.producto.descripcion}</p>
+                                            <p className="text-xs text-slate-500 font-mono mt-0.5">
+                                                {det.cantidad} und. &times; ${det.precioUnitario}
                                             </p>
                                         </div>
-                                        <p className="font-bold text-blue-600">
+                                        <p className="font-semibold text-slate-900">
                                             ${(det.cantidad * det.precioUnitario).toLocaleString()}
                                         </p>
                                     </div>
@@ -195,9 +191,9 @@ export const Movimientos = () => {
                             </div>
                             <button 
                                 onClick={() => setVentaSeleccionada(null)}
-                                className="w-full mt-6 bg-gray-800 text-white py-3 rounded-xl font-bold"
+                                className="w-full mt-6 bg-slate-800 hover:bg-slate-900 text-white py-2.5 rounded font-medium transition-colors"
                             >
-                                Cerrar
+                                Cerrar Ventana
                             </button>
                         </div>
                     </div>

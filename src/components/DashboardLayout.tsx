@@ -12,7 +12,7 @@ export const DashboardLayout = () => {
   };
 
   const menuOptions = [
-    { name: 'Inicio', path: '/' },
+    { name: 'Inicio', path: '/home' },
     { name: 'Caja', path: '/ventas' },
     { name: 'Inventario', path: '/inventario' },
     { name: 'Movimientos', path: '/movimientos' },
@@ -26,7 +26,7 @@ export const DashboardLayout = () => {
       {/* 📱 TOPBAR EXCLUSIVA PARA MÓVILES (Oculta en computadoras) */}
       <header className="md:hidden bg-slate-900 text-white h-16 px-4 flex items-center justify-between shadow-md z-30">
         <h2 className="text-xl font-black tracking-wider">
-          Los Cáceres <span className="text-blue-500">POS</span>
+          <span className="text-blue-500">KIPI</span>
         </h2>
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -63,7 +63,13 @@ export const DashboardLayout = () => {
         {/* Título/Logo del sistema (Sólo visible en escritorios) */}
         <div className="hidden md:h-20 md:flex items-center justify-center border-b border-slate-700">
           <h2 className="text-2xl font-black text-white tracking-wider">
-            Los Cáceres <span className="text-blue-500">POS</span>
+            
+            <div className="w-8 h-8 bg-slate-800 rounded flex items-center justify-center text-white font-bold tracking-tighter text-sm shadow-sm">
+              KP
+            </div>
+            <span className="text-xl font-bold tracking-tight text-blue-600">
+              KIPI<span className="text-slate-400">.</span>
+            </span>
           </h2>
         </div>
 

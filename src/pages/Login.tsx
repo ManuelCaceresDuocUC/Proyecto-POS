@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useLogin } from "../hooks/useLogin";
 import Swal from "sweetalert2";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom"; // ✨ Corrección: Link debe venir de react-router-dom
 
 export const Login = () => {
   const { logearUsuario } = useLogin();
@@ -13,87 +15,84 @@ export const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validación amigable con SweetAlert2
     if (!form.usuario.trim() || !form.contrasena.trim()) {
       return Swal.fire({
         icon: 'warning',
-        title: 'Campos incompletos',
-        text: 'Por favor, ingresa tanto tu nombre de usuario como tu contraseña para poder entrar al sistema.',
-        confirmButtonColor: '#3B82F6',
-        confirmButtonText: 'Entendido',
+        title: 'Información Requerida',
+        text: 'Por favor, ingrese el nombre de usuario y la contraseña para acceder al sistema.',
+        confirmButtonColor: '#1E293B',
+        confirmButtonText: 'Aceptar',
       });
     }
 
-    // Ejecutamos el login
-    // Nota: Si useLogin maneja errores internamente y lanza alertas, el texto de 
-    // los inputs ya no se borrará si el login falla, permitiendo al usuario corregirlo.
     logearUsuario({
       usuario: form.usuario.trim(),
       contrasena: form.contrasena.trim()
     });
-
-    // ✨ ELIMINAMOS el setForm() que limpiaba los campos aquí.
-    // Ahora, si hay un error, el texto se mantiene. Si el login es exitoso, 
-    // el usuario será redirigido, así que no importa que el texto siga ahí.
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative font-sans">
-      
-      {/* Tarjeta de Login */}
-      <div className="bg-white w-full max-w-md p-8 sm:p-10 rounded-2xl shadow-xl border border-slate-100">
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 relative font-sans text-slate-800">
+      <div className="bg-white w-full max-w-md p-8 rounded shadow-sm border border-slate-200">
         
-        {/* Cabecera / Logo */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-black tracking-wider text-slate-900 mb-2">
-            Los Cáceres <span className="text-blue-500">POS</span>
+        <div className="text-center mb-8 border-b border-slate-100 pb-6 relative">
+          {/* ✨ Ahora este Link sí te llevará a la ruta raíz (Landing) */}
+          <div className="flex justify-start mb-4">
+            <Link 
+              to="/" 
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Volver al Inicio</span>
+            </Link>
+          </div>
+
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 mb-1">
+            <div className="w-8 h-8 bg-slate-800 rounded flex items-center justify-center text-white font-bold tracking-tighter text-sm shadow-sm">
+              KP
+            </div>
+            <span className="text-xl font-bold tracking-tight text-slate-900">
+              KIPI<span className="text-slate-400">.</span>
+            </span>
           </h1>
-          <p className="text-slate-500 font-medium text-sm">
-            Bienvenido de vuelta. Ingresa tus credenciales para acceder al panel de control y punto de venta.
+          <p className="text-slate-500 font-normal text-xs uppercase tracking-wider">
+            Portal de Acceso Corporativo
           </p>
         </div>
 
-        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-          
-          {/* Campo Usuario */}
+        <form className="flex flex-col gap-4 text-sm" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1.5">
-              👤 Nombre de Usuario
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+               Nombre de Usuario
             </label>
             <input
               type="text"
-              className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-800"
-              placeholder="Ej: admin_caceres"
+              className="w-full p-3 bg-slate-50 border border-slate-300 rounded focus:bg-white focus:border-slate-500 outline-none transition-all text-slate-800 font-medium"
+              placeholder="Ingrese su usuario..."
               value={form.usuario}
               onChange={(e) => setForm({ ...form, usuario: e.target.value })}
             />
           </div>
 
-          {/* Campo Contraseña */}
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1.5">
-              🔒 Contraseña
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+               Contraseña
             </label>
             <input
               type="password"
-              className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-800"
+              className="w-full p-3 bg-slate-50 border border-slate-300 rounded focus:bg-white focus:border-slate-500 outline-none transition-all text-slate-800 font-medium"
               placeholder="••••••••"
               value={form.contrasena}
               onChange={(e) => setForm({ ...form, contrasena: e.target.value })}
             />
           </div>
 
-          {/* Botón Submit */}
           <button
             type="submit"
-            className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all active:scale-[0.98] flex justify-center items-center gap-2"
+            className="w-full mt-4 bg-slate-800 hover:bg-slate-900 text-white font-medium py-3 px-4 rounded shadow-sm transition-all active:scale-[0.99] flex justify-center items-center gap-2 text-sm"
           >
             Iniciar Sesión
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-            </svg>
           </button>
-          
         </form>
       </div>
     </div>
