@@ -44,7 +44,9 @@ export const useVentas = (onVentaExitosa?: () => void) => {
   const actualizarCantidad = (id: number, nuevaCantidad: number) => {
     setCarrito(prev => prev.map(p => {
       if (p.id === id) {
-        if (nuevaCantidad >= 1 && nuevaCantidad <= p.stock) {
+        // 🔥 CORRECCIÓN: Quitamos la validación "&& nuevaCantidad <= p.stock"
+        // Dejamos que el backend sea el encargado final de validar si alcanzan los ingredientes
+        if (nuevaCantidad >= 1) { 
           return { ...p, cantidad: nuevaCantidad, subtotal: nuevaCantidad * p.precio };
         }
       }
