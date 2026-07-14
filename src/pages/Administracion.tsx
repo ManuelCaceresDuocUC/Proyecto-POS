@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { apiFetch } from '../helpers/apiFetch'; // ✨ 1. Importamos nuestro helper
+import { apiFetch } from '../helpers/apiFetch';
 
 interface Metricas {
   ventasHoy: number;
@@ -31,6 +31,20 @@ interface Categoria {
   nombre: string;
 }
 
+// ✨ NUEVO: Interfaz para recibir el historial de cuadraturas de caja
+interface Cuadratura {
+  id: number;
+  cajeroId: number;
+  cajeroNombre?: string;
+  fechaApertura: string;
+  fechaCierre: string;
+  montoApertura: number;
+  totalSistema: number;
+  totalRealFisico: number;
+  diferencia: number;
+  estado: string;
+}
+
 export const Administracion = () => {
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL;
@@ -52,6 +66,9 @@ export const Administracion = () => {
   const [nuevaCategoria, setNuevaCategoria] = useState('');
   const [editandoCategoriaId, setEditandoCategoriaId] = useState<number | null>(null);
   const [editandoNombre, setEditandoNombre] = useState('');
+
+  // ✨ NUEVO: Estado para almacenar el historial de cuadraturas
+  const [cuadraturas, setCuadraturas] = useState<Cuadratura[]>([]);
 
   useEffect(() => {
     if (usuarioRol !== 'admin') {
@@ -75,18 +92,20 @@ export const Administracion = () => {
     const cargarDatosPanel = async () => {
       try {
         setCargando(true);
-        // ✨ 2. Uso de apiFetch para leer todas las métricas iniciales del panel
-        const [resMetricas, resEmpleados, resNotas, resCategorias] = await Promise.all([
+        // ✨ AGREGADO: Llamada al endpoint del historial de cajas
+        const [resMetricas, resEmpleados, resNotas, resCategorias, resCuadraturas] = await Promise.all([
           apiFetch(`${API_URL}/admin/metricas?empresaId=${empresaId}`),
           apiFetch(`${API_URL}/usuarios?empresaId=${empresaId}`),
           apiFetch(`${API_URL}/notas?empresaId=${empresaId}`),
-          apiFetch(`${API_URL}/categorias?empresaId=${empresaId}`) 
+          apiFetch(`${API_URL}/categorias?empresaId=${empresaId}`),
+          apiFetch(`${API_URL}/caja/historial?empresaId=${empresaId}`) 
         ]);
 
         if (resMetricas.ok) setMetricas(await resMetricas.json());
         if (resEmpleados.ok) setEmpleados(await resEmpleados.json());
         if (resNotas.ok) setNotas(await resNotas.json());
         if (resCategorias.ok) setCategorias(await resCategorias.json());
+        if (resCuadraturas && resCuadraturas.ok) setCuadraturas(await resCuadraturas.json());
       } catch (error) {
         console.error("Error al cargar los datos del panel", error);
       } finally {
@@ -102,7 +121,6 @@ export const Administracion = () => {
 
     const cargarMasVendidos = async () => {
       try {
-        // ✨ 3. Uso de apiFetch en el filtro de productos más vendidos
         const res = await apiFetch(`${API_URL}/admin/productos-mas-vendidos?periodo=${periodo}&empresaId=${empresaId}`);
         if (res.ok) {
           setMasVendidos(await res.json());
@@ -119,7 +137,6 @@ export const Administracion = () => {
     e.preventDefault();
     if (!nuevaNota.trim()) return;
     try {
-      // ✨ 4. Uso de apiFetch para registrar notas
       const res = await apiFetch(`${API_URL}/notas`, {
         method: 'POST',
         body: JSON.stringify({ 
@@ -139,7 +156,6 @@ export const Administracion = () => {
 
   const eliminarNota = async (id: number) => {
     try {
-      // ✨ 5. Uso de apiFetch para borrar notas
       if ((await apiFetch(`${API_URL}/notas/${id}`, { method: 'DELETE' })).ok) {
         setNotas(notas.filter(n => n.id !== id));
       }
@@ -153,7 +169,6 @@ export const Administracion = () => {
     e.preventDefault();
     if (!nuevaCategoria.trim()) return;
     try {
-      // ✨ 6. Uso de apiFetch para crear categorías
       const res = await apiFetch(`${API_URL}/categorias`, {
         method: 'POST',
         body: JSON.stringify({ 
@@ -181,7 +196,6 @@ export const Administracion = () => {
   const guardarEdicion = async (id: number) => {
     if (!editandoNombre.trim()) return;
     try {
-      // ✨ 7. Uso de apiFetch para actualizar categorías
       const res = await apiFetch(`${API_URL}/categorias/${id}`, {
         method: 'PUT',
         body: JSON.stringify({ 
@@ -217,7 +231,6 @@ export const Administracion = () => {
     if (!result.isConfirmed) return;
 
     try {
-      // ✨ 8. Uso de apiFetch para eliminar categorías
       const res = await apiFetch(`${API_URL}/categorias/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setCategorias(categorias.filter(cat => cat.id !== id));
@@ -268,6 +281,76 @@ export const Administracion = () => {
             <div className="bg-white p-6 rounded shadow-sm border border-slate-200">
               <h3 className="text-slate-500 font-medium text-xs uppercase tracking-wider mb-1">Capital en Inventario</h3>
               <p className="text-2xl font-semibold text-slate-900">${metricas.costoInventario.toLocaleString('es-CL')}</p>
+            </div>
+          </div>
+
+          {/* ✨ NUEVO: Tabla de Cuadraturas de Caja */}
+          <div className="bg-white rounded shadow-sm border border-slate-200 p-6">
+            <h2 className="text-base font-semibold text-slate-800 uppercase tracking-wide mb-1">Cuadraturas de Caja</h2>
+            <p className="text-slate-500 text-xs mb-4 border-b border-slate-100 pb-3">Registro y control de aperturas, cierres y diferencias de efectivo por cajero.</p>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-medium">
+                  <tr>
+                    <th className="p-3">Turno / Cajero</th>
+                    <th className="p-3">Horario</th>
+                    <th className="p-3 text-right">Sistema</th>
+                    <th className="p-3 text-right">Real Físico</th>
+                    <th className="p-3 text-right">Diferencia</th>
+                    <th className="p-3 text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {cuadraturas.map(c => {
+                    const diferencia = c.diferencia || 0;
+                    const esFaltante = diferencia < 0;
+                    const esSobrante = diferencia > 0;
+                    
+                    // Cruza el ID con la lista de personal si el backend no manda el nombre en el JSON
+                    const nombreEmpleado = c.cajeroNombre || empleados.find(emp => emp.id === c.cajeroId)?.usuario || `ID: ${c.cajeroId}`;
+
+                    return (
+                      <tr key={c.id} className="hover:bg-slate-50">
+                        <td className="p-3 font-medium text-slate-800">
+                          <div>{nombreEmpleado}</div>
+                          <span className="text-xs font-mono text-slate-400">Turno #{c.id}</span>
+                        </td>
+                        <td className="p-3 text-xs text-slate-600 whitespace-nowrap">
+                          <div><strong>Abre:</strong> {new Date(c.fechaApertura).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
+                          <div><strong>Cierra:</strong> {c.fechaCierre ? new Date(c.fechaCierre).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '---'}</div>
+                        </td>
+                        <td className="p-3 text-right text-slate-700 font-mono">
+                          ${(c.totalSistema || 0).toLocaleString('es-CL')}
+                        </td>
+                        <td className="p-3 text-right font-semibold text-slate-900 font-mono">
+                          ${(c.totalRealFisico || 0).toLocaleString('es-CL')}
+                        </td>
+                        <td className={`p-3 text-right font-bold font-mono ${
+                          esFaltante ? 'text-red-600' : esSobrante ? 'text-emerald-600' : 'text-slate-500'
+                        }`}>
+                          {esFaltante && 'Falta: '}
+                          {esSobrante && 'Sobra: '}
+                          {diferencia === 0 && 'Exacto: '}
+                          ${Math.abs(diferencia).toLocaleString('es-CL')}
+                        </td>
+                        <td className="p-3 text-center">
+                          <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
+                            c.estado === 'ABIERTA' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {c.estado}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {cuadraturas.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center p-6 text-slate-400 text-sm">No hay registros de cuadraturas disponibles para esta empresa.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
