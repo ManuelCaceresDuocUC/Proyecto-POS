@@ -9,9 +9,8 @@ interface IngredienteReceta {
   cantidad: number;
 }
 
-// 🟢 Estructura para agrupar visualmente las recetas por Producto Comercial
 interface RecetaAgrupada {
-  productoId: string | number;
+  productoId: string;
   productoNombre: string;
   ingredientes: {
     recetaId: number;
@@ -21,7 +20,7 @@ interface RecetaAgrupada {
   }[];
 }
 
-// 🛡️ Funciones auxiliares blindadas para extraer nombres sin importar el mapeo del backend
+// 🛡️ Funciones auxiliares para extraer nombres sin importar la serialización del backend
 const getNombreProducto = (r: Receta): string => 
   r.productoPrincipal?.descripcion || r.productoPadreNombre || r.productoNombre || r.producto?.descripcion || 'Producto sin nombre';
 
@@ -37,6 +36,10 @@ export const Recetas = () => {
   
   const [showModalReceta, setShowModalReceta] = useState(false);
   const [busqueda, setBusqueda] = useState(''); 
+  
+  // 🟢 ESTADO PARA CONTROLAR QUÉ PRODUCTOS ESTÁN DESPLEGADOS
+  const [expandidos, setExpandidos] = useState<string[]>([]);
+
   const [productoPrincipal, setProductoPrincipal] = useState({
     descripcion: '',
     precio: '',
@@ -47,7 +50,13 @@ export const Recetas = () => {
   const [tempInsumoId, setTempInsumoId] = useState('');
   const [tempCantidad, setTempCantidad] = useState('');
 
-  // Cálculo de stock máximo posible según insumos disponibles
+  // 🟢 FUNCIÓN PARA ALTERNAR (ABRIR/CERRAR) LOS INSUMOS DE UN PRODUCTO
+  const toggleExpandir = (id: string) => {
+    setExpandidos(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
   const stockMaximoPosible = useMemo(() => {
     if (listaIngredientes.length === 0) return 0;
     const limites = listaIngredientes.map(ing => {
@@ -124,7 +133,6 @@ export const Recetas = () => {
     }
   };
 
-  // 🟢 1. Filtrado de registros en bruto
   const recetasFiltradas = useMemo(() => {
     return recetas.filter(r => {
       const nombreProducto = getNombreProducto(r);
@@ -134,7 +142,6 @@ export const Recetas = () => {
     });
   }, [recetas, busqueda]);
 
-  // 🟢 2. Agrupación por Producto Comercial para visualización en tarjetas
   const recetasAgrupadas = useMemo(() => {
     const grupos: { [key: string]: RecetaAgrupada } = {};
 
@@ -170,7 +177,7 @@ export const Recetas = () => {
         <div className="w-full max-w-6xl mb-8 border-b border-slate-200 pb-4 flex justify-between items-end">
           <div>
             <h1 className='text-3xl font-semibold text-slate-900 tracking-tight'>Gestión de Formulaciones y Recetas</h1>
-            <p className="text-slate-500 text-sm mt-1">Estructura de insumos y dependencias para productos elaborados.</p>
+            <p className="text-slate-500 text-sm mt-1">Selecciona un producto elaborado para visualizar y gestionar sus insumos componentes.</p>
           </div>
           <button 
               onClick={() => setShowModalReceta(true)}
@@ -190,60 +197,91 @@ export const Recetas = () => {
             />
         </div>
 
-        {/* 🟢 3. Contenedor de Tarjetas por Formulación Completa */}
-        <div className='w-full max-w-6xl space-y-6'>
+        {/* 🟢 LISTA DE PRODUCTOS ACORDEÓN */}
+        <div className='w-full max-w-6xl space-y-3'>
             {recetasAgrupadas.length === 0 ? (
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center text-slate-400 font-medium">
                     No se encontraron formulaciones registradas que coincidan con la búsqueda.
                 </div>
             ) : (
-                recetasAgrupadas.map((grupo) => (
-                    <div key={grupo.productoId} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden transition-all hover:shadow-md">
-                        {/* Cabecera del Producto Comercial */}
-                        <div className="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <span className="w-2.5 h-2.5 rounded-full bg-slate-700 inline-block"></span>
-                                <h3 className="font-bold text-slate-900 text-base tracking-wide uppercase">
-                                    {grupo.productoNombre}
-                                </h3>
-                            </div>
-                            <span className="text-xs bg-white border border-slate-300 text-slate-700 font-semibold px-3 py-1 rounded-full shadow-2xs">
-                                {grupo.ingredientes.length} {grupo.ingredientes.length === 1 ? 'insumo vinculado' : 'insumos vinculados'}
-                            </span>
-                        </div>
+                recetasAgrupadas.map((grupo) => {
+                    const estaExpandido = expandidos.includes(grupo.productoId);
 
-                        {/* Tabla de Insumos de esta Receta */}
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50/75 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                <tr>
-                                    <th className="px-6 py-3 w-1/2">Insumo Componente (Descuento de Stock)</th>
-                                    <th className="px-6 py-3 w-1/4">Consumo Unitario</th>
-                                    <th className="px-6 py-3 w-1/4 text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {grupo.ingredientes.map((ing) => (
-                                    <tr key={ing.recetaId} className="hover:bg-slate-50/80 transition-colors">
-                                        <td className="px-6 py-3.5 font-medium text-slate-800 flex items-center gap-2">
-                                            <span className="text-slate-400">↳</span> {ing.insumoNombre}
-                                        </td>
-                                        <td className="px-6 py-3.5 font-mono font-semibold text-slate-700">
-                                            {ing.cantidadUsada} <span className="text-xs font-sans font-normal text-slate-400">unidades/medida</span>
-                                        </td>
-                                        <td className="px-6 py-3.5 text-right">
-                                            <button 
-                                                onClick={() => eliminarReceta(ing.recetaId)} 
-                                                className="text-red-600 hover:text-red-800 font-medium hover:underline text-xs transition-colors px-2 py-1 rounded hover:bg-red-50"
-                                            >
-                                                Disociar Insumo
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ))
+                    return (
+                        <div key={grupo.productoId} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden transition-all">
+                            
+                            {/* 🟢 CABECERA CLICKEABLE DEL PRODUCTO */}
+                            <div 
+                                onClick={() => toggleExpandir(grupo.productoId)}
+                                className={`px-6 py-4 flex justify-between items-center cursor-pointer select-none transition-colors ${
+                                    estaExpandido ? 'bg-slate-100 border-b border-slate-200' : 'bg-white hover:bg-slate-50'
+                                }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    {/* Flecha indicadora de apertura */}
+                                    <svg 
+                                        className={`w-4 h-4 text-slate-500 transform transition-transform duration-200 ${estaExpandido ? 'rotate-180' : ''}`} 
+                                        fill="none" 
+                                        stroke="currentColor" 
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                    <h3 className="font-bold text-slate-900 text-base tracking-wide uppercase">
+                                        {grupo.productoNombre}
+                                    </h3>
+                                </div>
+
+                                <div className="flex items-center gap-4">
+                                    <span className="text-xs bg-slate-100 border border-slate-200 text-slate-700 font-semibold px-3 py-1 rounded-full shadow-2xs">
+                                        {grupo.ingredientes.length} {grupo.ingredientes.length === 1 ? 'insumo' : 'insumos'}
+                                    </span>
+                                    <span className="text-xs font-semibold text-slate-500 hover:text-slate-800 underline w-20 text-right">
+                                        {estaExpandido ? 'Ocultar' : 'Ver insumos'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* 🟢 TABLA DESPLEGABLE CON LOS INSUMOS */}
+                            {estaExpandido && (
+                                <div className="bg-slate-50/50 p-2">
+                                    <table className="w-full text-left text-sm bg-white rounded border border-slate-100 overflow-hidden shadow-2xs">
+                                        <thead className="bg-slate-100/75 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                            <tr>
+                                                <th className="px-6 py-3 w-1/2">Insumo Componente (Descuento de Stock)</th>
+                                                <th className="px-6 py-3 w-1/4">Consumo Unitario</th>
+                                                <th className="px-6 py-3 w-1/4 text-right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {grupo.ingredientes.map((ing) => (
+                                                <tr key={ing.recetaId} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="px-6 py-3 font-medium text-slate-800 flex items-center gap-2">
+                                                        <span className="text-slate-400 font-mono">↳</span> {ing.insumoNombre}
+                                                    </td>
+                                                    <td className="px-6 py-3 font-mono font-semibold text-slate-700">
+                                                        {ing.cantidadUsada} <span className="text-xs font-sans font-normal text-slate-400">unidades/medida</span>
+                                                    </td>
+                                                    <td className="px-6 py-3 text-right">
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation(); // Evita que al hacer clic en disociar se cierre el acordeón
+                                                                eliminarReceta(ing.recetaId);
+                                                            }} 
+                                                            className="text-red-600 hover:text-red-800 font-medium hover:underline text-xs transition-colors px-2 py-1 rounded hover:bg-red-50"
+                                                        >
+                                                            Disociar Insumo
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })
             )}
         </div>
 
