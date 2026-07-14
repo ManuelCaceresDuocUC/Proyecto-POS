@@ -20,15 +20,70 @@ interface RecetaAgrupada {
   }[];
 }
 
-// 🛡️ Funciones auxiliares para extraer nombres sin importar la serialización del backend
-const getNombreProducto = (r: Receta): string => 
-  r.productoPrincipal?.descripcion || r.productoPadreNombre || r.productoNombre || r.producto?.descripcion || 'Producto sin nombre';
+// 🛡️ Tipos auxiliares para satisfacer a TypeScript y ESLint sin usar 'any'
+interface EntidadFlexible {
+  id?: string | number;
+  descripcion?: string;
+  nombre?: string;
+  stock?: number;
+  [key: string]: unknown; // Permite propiedades adicionales de forma segura
+}
 
-const getNombreInsumo = (r: Receta): string => 
-  r.insumo?.descripcion || r.insumoNombre || 'Insumo sin nombre';
+type RecetaFlexible = Receta & {
+  productoPrincipal?: EntidadFlexible;
+  producto?: EntidadFlexible;
+  productoPadre?: EntidadFlexible;
+  insumo?: EntidadFlexible;
+  ingrediente?: EntidadFlexible;
+  productoPadreId?: string | number;
+  productoPadreNombre?: string;
+  productoNombre?: string;
+  insumoNombre?: string;
+  [key: string]: unknown;
+};
 
-const getIdProducto = (r: Receta): string | number => 
-  r.productoPrincipal?.id || r.productoPadreId || r.producto?.id || getNombreProducto(r);
+// 🛡️ Extractor Universal Blindado para el ID del Producto Padre
+const getIdProducto = (r: Receta): string | number => {
+  const rec = r as RecetaFlexible;
+  return rec.productoPrincipal?.id || rec.productoPadreId || rec.producto?.id || rec.productoPadre?.id || 'sin-id';
+};
+
+// 🛡️ Extractor Universal para el Nombre (100% compatible con cualquier catálogo o interfaz)
+const getNombreProducto = (r: Receta, catalogoProductos: unknown[] = []): string => {
+  const rec = r as RecetaFlexible;
+
+  // 1. Intentar obtener el nombre directamente del objeto de la receta
+  const nombreDirecto = 
+    rec.productoPrincipal?.descripcion || 
+    rec.productoPrincipal?.nombre ||
+    rec.productoPadreNombre || 
+    rec.productoNombre || 
+    rec.producto?.descripcion ||
+    rec.producto?.nombre ||
+    rec.productoPadre?.descripcion ||
+    rec.productoPadre?.nombre;
+
+  if (nombreDirecto) return nombreDirecto;
+
+  // 2. Plan de Rescate: Si el backend solo mandó el ID, lo buscamos en el inventario cargado
+  const id = getIdProducto(r);
+  if (id !== 'sin-id' && catalogoProductos.length > 0) {
+    const catalogo = catalogoProductos as EntidadFlexible[];
+    const productoEncontrado = catalogo.find(p => String(p?.id) === String(id));
+    if (productoEncontrado) {
+      return productoEncontrado.descripcion || productoEncontrado.nombre || `Producto ID: ${id}`;
+    }
+  }
+
+  // 3. Último recurso si el producto fue borrado del inventario pero la receta sigue ahí
+  return id !== 'sin-id' ? `Producto ID: ${id}` : 'Formulación sin identificar';
+};
+
+// 🛡️ Extractor para el Insumo
+const getNombreInsumo = (r: Receta): string => {
+  const rec = r as RecetaFlexible;
+  return rec.insumo?.descripcion || rec.insumo?.nombre || rec.insumoNombre || rec.ingrediente?.descripcion || rec.ingrediente?.nombre || 'Insumo sin nombre';
+};
 
 export const Recetas = () => {
   const { productos, cargarProductos } = useInventario(); 
@@ -135,21 +190,23 @@ export const Recetas = () => {
 
   const recetasFiltradas = useMemo(() => {
     return recetas.filter(r => {
-      const nombreProducto = getNombreProducto(r);
+      // Le pasamos el catálogo de productos para que resuelva el nombre si falta en la receta
+      const nombreProducto = getNombreProducto(r, productos);
       const nombreInsumo = getNombreInsumo(r);
       return nombreProducto.toLowerCase().includes(busqueda.toLowerCase()) ||
              nombreInsumo.toLowerCase().includes(busqueda.toLowerCase());
     });
-  }, [recetas, busqueda]);
+  }, [recetas, busqueda, productos]);
 
   const recetasAgrupadas = useMemo(() => {
     const grupos: { [key: string]: RecetaAgrupada } = {};
 
     recetasFiltradas.forEach(r => {
+      const rec = r as RecetaFlexible; // 👈 Casteo seguro aplicado para evitar errores TS en el bucle
       const prodId = String(getIdProducto(r));
-      const prodNombre = getNombreProducto(r);
+      const prodNombre = getNombreProducto(r, productos);
       const insNombre = getNombreInsumo(r);
-      const insId = r.insumo?.id || r.insumoId || 'desconocido';
+      const insId = rec.insumo?.id || rec.insumoId || rec.ingrediente?.id || 'desconocido';
 
       if (!grupos[prodId]) {
         grupos[prodId] = {
@@ -170,7 +227,7 @@ export const Recetas = () => {
     });
 
     return Object.values(grupos);
-  }, [recetasFiltradas]);
+  }, [recetasFiltradas, productos]);
 
   return (
     <div className='min-h-screen bg-slate-50 flex flex-col items-center p-8 font-sans text-slate-800'>
