@@ -63,7 +63,7 @@ export const Administracion = () => {
         allowOutsideClick: false,
         allowEscapeKey: false
       }).then(() => {
-        navigate('/'); 
+        navigate('/home'); 
       });
     }
   }, [usuarioRol, navigate]);

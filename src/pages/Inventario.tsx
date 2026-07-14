@@ -30,7 +30,7 @@ export const Inventario = () => {
         allowOutsideClick: false,
         allowEscapeKey: false
       }).then(() => {
-        navigate('/'); 
+        navigate('/home'); 
       });
     }
   }, [usuarioRol, navigate]);
