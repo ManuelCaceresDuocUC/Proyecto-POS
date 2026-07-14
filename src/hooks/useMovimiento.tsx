@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "../helpers/apiFetch"; // ✨ 1. Importación del helper
 
 export interface VentaDetalle {
     id: number;
@@ -25,18 +26,12 @@ export const useMovimiento = () => {
 
     const API_URL = `${import.meta.env.VITE_API_URL}/movimientos`;
 
-    // Recibimos las fechas opcionales
     const cargarMovimientos = async (fechaInicio?: string, fechaFin?: string) => {
         try {
             setLoading(true);
-            
-            // ✨ 1. Obtenemos el ID de la empresa guardado en el localStorage
             const empresaId = localStorage.getItem('empresaId') || '1';
-
-            // ✨ 2. Iniciamos la URL siempre incluyendo el empresaId obligatorio
             let url = `${API_URL}?empresaId=${empresaId}`;
             
-            // Si el usuario seleccionó fechas, las añadimos usando '&'
             if (fechaInicio) {
                 url += `&fechaInicio=${fechaInicio}`;
                 if (fechaFin) {
@@ -44,7 +39,8 @@ export const useMovimiento = () => {
                 }
             }
 
-            const respuesta = await fetch(url);
+            // ✨ 2. Uso de apiFetch
+            const respuesta = await apiFetch(url);
             if (!respuesta.ok) throw new Error("Error en la respuesta del servidor");
             
             const datos = await respuesta.json();
@@ -57,10 +53,9 @@ export const useMovimiento = () => {
         }
     };
 
-    // Al montar el componente, se llama sin parámetros (el backend asumirá que es HOY)
     useEffect(() => {
         cargarMovimientos();
     }, []);
 
     return { cargarMovimientos, movimientos, loading, error, setError };
-}
+};

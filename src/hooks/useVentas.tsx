@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
+import { apiFetch } from "../helpers/apiFetch"; // ✨ 1. Importación del helper
 
 export interface Producto {
   id: number;
@@ -15,10 +16,7 @@ export interface ItemCarrito extends Producto {
 
 export const useVentas = (onVentaExitosa?: () => void) => {
   const [metodoPago, setMetodoPago] = useState("");
-  
-  // 1️⃣ CAMBIO: Añadimos "TRANSBANK" a los tipos válidos del estado
   const [proveedorTarjeta, setProveedorTarjeta] = useState<"GETNET" | "MERCADOPAGO" | "TRANSBANK" | null>(null);
-  
   const [showModalPago, setShowModalPago] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
@@ -44,8 +42,6 @@ export const useVentas = (onVentaExitosa?: () => void) => {
   const actualizarCantidad = (id: number, nuevaCantidad: number) => {
     setCarrito(prev => prev.map(p => {
       if (p.id === id) {
-        // 🔥 CORRECCIÓN: Quitamos la validación "&& nuevaCantidad <= p.stock"
-        // Dejamos que el backend sea el encargado final de validar si alcanzan los ingredientes
         if (nuevaCantidad >= 1) { 
           return { ...p, cantidad: nuevaCantidad, subtotal: nuevaCantidad * p.precio };
         }
@@ -60,7 +56,6 @@ export const useVentas = (onVentaExitosa?: () => void) => {
   const confirmarVentaFinal = async () => {
     if (!metodoPago) return;
 
-    // 2️⃣ CAMBIO: Actualizamos el mensaje de validación para incluir Transbank
     if (metodoPago === 'TARJETA' && !proveedorTarjeta) {
       Swal.fire('Atención', 'Selecciona la terminal (Getnet, Mercado Pago o Transbank)', 'warning');
       return;
@@ -93,14 +88,13 @@ export const useVentas = (onVentaExitosa?: () => void) => {
       let respuestaBackend;
 
       if (metodoPago === 'TARJETA') {
-        // Comunicación con tu Agente Local (Java)
+        // ✨ NOTA: Se mantiene fetch estándar para no enviar tokens del backend a la terminal local de hardware
         const resAgente = await fetch('https://mulch-jolt-glamorous.ngrok-free.dev/api/pos/cobrar', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
             'ngrok-skip-browser-warning': 'true' 
           },
-          // 3️⃣ CAMBIO: Agregamos de manera dinámica el campo 'ticket' para Transbank
           body: JSON.stringify({ 
             monto: datosVenta.monto,
             proveedor: proveedorTarjeta,
@@ -115,11 +109,10 @@ export const useVentas = (onVentaExitosa?: () => void) => {
           throw new Error(resultadoAgente.mensaje || "Pago rechazado por la terminal");
         }
 
-        // Paso a la Nube (AWS)
+        // ✨ 2. Uso de apiFetch en la nube (AWS) tras el cobro
         const urlAws = `${import.meta.env.VITE_API_URL}/pagos/cobrar`; 
-        const resAws = await fetch(urlAws, {
+        const resAws = await apiFetch(urlAws, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(datosVenta)
         });
 
@@ -127,9 +120,9 @@ export const useVentas = (onVentaExitosa?: () => void) => {
         respuestaBackend = await resAws.json();
 
       } else {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/pagos/efectivo`, {
+        // ✨ 3. Uso de apiFetch para pagos en efectivo
+        const res = await apiFetch(`${import.meta.env.VITE_API_URL}/pagos/efectivo`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(datosVenta)
         });
 

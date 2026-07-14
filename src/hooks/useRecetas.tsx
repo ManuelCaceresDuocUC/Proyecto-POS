@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
+import { apiFetch } from "../helpers/apiFetch"; // ✨ 1. Importación del helper
 
 export interface Receta {
     id?: number;
@@ -9,7 +10,6 @@ export interface Receta {
     insumoId?: number;        
     insumoNombre?: string;
     cantidadUsada: number;   
-    // 🟢 Soporte para objetos completos anidados de JPA/Spring Boot
     productoPrincipal?: {
         id: number;
         descripcion: string;
@@ -34,7 +34,8 @@ export const useRecetas = () => {
     const cargarRecetas = async () => {
         try {
             setLoading(true);
-            const respuesta = await fetch(API_URL);
+            // ✨ 2. Uso de apiFetch
+            const respuesta = await apiFetch(API_URL);
             if (!respuesta.ok) throw new Error("Error al conectar con el servidor");
             const datos = await respuesta.json();
             
@@ -65,7 +66,8 @@ export const useRecetas = () => {
 
         if (result.isConfirmed) {
             try {
-                const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                // ✨ 3. Uso de apiFetch para eliminar
+                const res = await apiFetch(`${API_URL}/${id}`, { method: 'DELETE' });
                 if (!res.ok) throw new Error("Error en el servidor");
 
                 setRecetas(recetas.filter(r => r.id !== id));
@@ -80,9 +82,9 @@ export const useRecetas = () => {
 
     const agregarReceta = async (nuevo: Omit<Receta, 'id' | 'productoPadreNombre' | 'insumoNombre'>) => {
         try {
-            const res = await fetch(API_URL, {
+            // ✨ 4. Uso de apiFetch para crear receta
+            const res = await apiFetch(API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(nuevo)
             });
             if (!res.ok) throw new Error("Error al guardar");
@@ -99,9 +101,9 @@ export const useRecetas = () => {
 
     const editarReceta = async (id: number, datosActualizados: Partial<Receta>) => {
         try {
-            const res = await fetch(`${API_URL}/${id}`, {
+            // ✨ 5. Uso de apiFetch para editar receta
+            const res = await apiFetch(`${API_URL}/${id}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(datosActualizados)
             });
 

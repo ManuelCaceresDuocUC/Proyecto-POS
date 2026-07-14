@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { apiFetch } from "../helpers/apiFetch"; // ✨ 1. Importamos nuestro helper
 
 interface Usuario {
     usuario: string;
     contrasena: string;
+    rol?: string;
+    id?: number;
+    empresa?: { id: number };
 }
 
 export const useLogin = () => {
@@ -25,8 +29,11 @@ export const useLogin = () => {
     const cargarUsuarios = async () => {
         try {
             setLoading(true);
-            const respuesta = await fetch(API_URL);
-            if (!respuesta.ok) throw new Error("Error al conectar con el servidor");
+
+            // ✨ 2. MIRA QUÉ LIMPIO: apiFetch se encarga de buscar y pegar el JWT automáticamente
+            const respuesta = await apiFetch(API_URL);
+
+            if (!respuesta.ok) throw new Error("Error al conectar con el servidor o sin permisos");
             const datos = await respuesta.json();
             setUsuarios(datos);
         } catch (err: unknown) {
@@ -45,6 +52,8 @@ export const useLogin = () => {
         setLoading(true); 
         setError(null);
         try {
+            // Para el login podemos seguir usando fetch normal (o apiFetch), 
+            // ya que en este momento el usuario todavía no tiene un token:
             const respuesta = await fetch(`${API_URL}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -52,7 +61,7 @@ export const useLogin = () => {
             });
 
             if (respuesta.ok) {
-                const { usuario: usuarioLogeado, token } = await respuesta.json(); // Leemos el objeto y el token
+                const { usuario: usuarioLogeado, token } = await respuesta.json();
                 
                 Swal.fire({
                     title: `¡Bienvenido ${usuarioLogeado.usuario}!`,
@@ -61,10 +70,10 @@ export const useLogin = () => {
                     showConfirmButton: false
                 });
 
-                // ✨ Guardamos el token criptográfico para usarlo después
+                // Guardado del token y sesión
                 localStorage.setItem('jwt_token', token);
-
                 localStorage.setItem('user_session', JSON.stringify(usuarioLogeado));
+                
                 const rolUsuario = usuarioLogeado.rol || 'vendedor';
                 localStorage.setItem('usuarioRol', rolUsuario);
                 localStorage.setItem('usuarioNombre', usuarioLogeado.usuario);
@@ -75,16 +84,18 @@ export const useLogin = () => {
                 if (rolUsuario === 'administrador' || rolUsuario === 'admin') {
                     navigate('/administracion');
                 } else {
-                    navigate('/home');
+                    navigate('/home'); 
                 }
+            } else {
+                // Si la clave o el usuario están mal, lanzamos el error al catch
+                throw new Error("Usuario o contraseña incorrectos");
             }
-
-            
-        } catch (err) {
+        } catch {
             Swal.fire({
-                title: `Error de acceso ${err}`,
+                title: 'Error de acceso',
                 text: "Usuario o contraseña incorrectos",
                 icon: 'error',
+                confirmButtonColor: '#1E293B',
                 confirmButtonText: 'Reintentar'
             });
         } finally {
