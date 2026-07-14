@@ -1,14 +1,24 @@
-
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 
 export interface Receta {
     id?: number;
     productoPadreId: number;
+    // 🟢 CORRECCIÓN 1: Agregamos variaciones de nombres comunes que Spring Boot suele enviar al mapear el JSON
     productoPadreNombre?: string; 
+    productoNombre?: string; 
     insumoId: number;        
     insumoNombre?: string;
     cantidadUsada: number;   
+    // Por si tu backend devuelve el objeto completo embebido:
+    insumo?: {
+        id: number;
+        descripcion: string;
+    };
+    producto?: {
+        id: number;
+        descripcion: string;
+    };
 }
 
 export const useRecetas = () => {
@@ -16,12 +26,15 @@ export const useRecetas = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const API_URL = `${import.meta.env.VITE_API_URL}/recetas`;
+
     const cargarRecetas = async () => {
         try {
             setLoading(true);
             const respuesta = await fetch(API_URL);
             if (!respuesta.ok) throw new Error("Error al conectar con el servidor");
             const datos = await respuesta.json();
+            
+            console.log("Recetas recibidas del backend:", datos); // Te ayudará a inspeccionar los nombres reales de las columnas en F12
             setRecetas(datos);
         } catch (err: unknown) {
             const mensaje = err instanceof Error ? err.message : "Error desconocido";
@@ -49,7 +62,7 @@ export const useRecetas = () => {
         if (result.isConfirmed) {
             try {
                 const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-                if(!res.ok) throw new Error("Error en el servidor");
+                if (!res.ok) throw new Error("Error en el servidor");
 
                 setRecetas(recetas.filter(r => r.id !== id));
                 Swal.fire('Eliminado', 'La receta ha sido actualizada.', 'success');
@@ -57,11 +70,7 @@ export const useRecetas = () => {
                 console.error("Error al eliminar:", err);
                 const mensajeError = err instanceof Error ? err.message : 'Ocurrió un problema inesperado';
 
-                Swal.fire(
-                    'Error',          
-                    mensajeError,     
-                    'error'         
-                );
+                Swal.fire('Error', mensajeError, 'error');
             }
         }
     };
@@ -82,11 +91,7 @@ export const useRecetas = () => {
             console.error("Error al agregar:", err);
             const mensajeError = err instanceof Error ? err.message : 'Ocurrió un problema inesperado';
 
-            Swal.fire(
-                'Error',          
-                mensajeError,     
-                'error'           
-            );
+            Swal.fire('Error', mensajeError, 'error');
         }
     };
 
@@ -106,23 +111,21 @@ export const useRecetas = () => {
             Swal.fire('Actualizado', 'Los cambios han sido guardados', 'success');
         } catch (err: unknown) {
             console.error("Error al actualizar:", err); 
-            
-            
             const mensajeError = err instanceof Error ? err.message : 'Ocurrió un problema inesperado';
 
-            Swal.fire(
-                'Error',          
-                mensajeError,     
-                'error'           
-            );
+            Swal.fire('Error', mensajeError, 'error');
         }
     };
 
-    return {recetas,
-            loading,
-            error,
-            eliminarReceta,
-            agregarReceta,
-            editarReceta,
-            refrescar: cargarRecetas };
+    // 🟢 CORRECCIÓN 2: Exportamos "cargarRecetas" explícitamente junto con "refrescar"
+    return {
+        recetas,
+        loading,
+        error,
+        eliminarReceta,
+        agregarReceta,
+        editarReceta,
+        cargarRecetas, // <-- Ahora sí podemos usar { cargarRecetas } en Recetas.tsx sin errores
+        refrescar: cargarRecetas 
+    };
 };

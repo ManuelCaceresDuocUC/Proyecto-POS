@@ -35,6 +35,7 @@ export const Inventario = () => {
     }
   }, [usuarioRol, navigate]);
 
+  // 🟢 CORRECCIÓN 1: Extraemos cargarProductos para poder llamarlo de forma manual
   const { 
     productos,
     eliminarProducto,
@@ -43,9 +44,17 @@ export const Inventario = () => {
     obtenerStockVisual,
     productosFiltrados,
     busqueda,
-    setBusqueda 
+    setBusqueda,
+    cargarProductos 
   } = useInventario();
   
+  // 🟢 CORRECCIÓN 2: Forzamos el refresco de datos cada vez que el usuario entra a la pantalla de Inventario
+  useEffect(() => {
+    if (cargarProductos) {
+      cargarProductos();
+    }
+  }, []);
+
   const productosRef = useRef<Producto[]>([]);
 
   useEffect(() => {
@@ -59,8 +68,8 @@ export const Inventario = () => {
 
     const cargarCategorias = async () => {
       try {
-          const response = await fetch(`${import.meta.env.VITE_API_URL}/categorias`);
-          if (response.ok) {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/categorias`);
+        if (response.ok) {
           const data = await response.json();
           setCategorias(data);
         }
@@ -239,6 +248,8 @@ export const Inventario = () => {
       }
     }
   };
+
+  
 
   if (usuarioRol !== 'admin') return null;
 

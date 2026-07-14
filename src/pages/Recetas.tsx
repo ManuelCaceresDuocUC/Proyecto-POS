@@ -4,94 +4,103 @@ import { useState, useMemo } from 'react';
 import Swal from 'sweetalert2';
 
 interface IngredienteReceta {
-    insumoId: number;
-    nombre: string;
-    cantidad: number;
+  insumoId: number;
+  nombre: string;
+  cantidad: number;
 }
 
 export const Recetas = () => {
-    const { productos, cargarProductos } = useInventario(); 
-    const { recetas, eliminarReceta } = useRecetas(); 
-    const [showModalReceta, setShowModalReceta] = useState(false);
-    const [busqueda, setBusqueda] = useState(''); 
-    const [productoPrincipal, setProductoPrincipal] = useState({
-        descripcion: '',
-        precio: '',
-        stockCritico: '5',
-        codigoBarras: ''
+  const { productos, cargarProductos } = useInventario(); 
+  
+  // 🟢 CORRECCIÓN 1: Extraemos la función para refrescar recetas (ajusta el nombre si en tu hook se llama diferente, ej: obtenerRecetas o refetch)
+  const { recetas, eliminarReceta, cargarRecetas } = useRecetas(); 
+  
+  const [showModalReceta, setShowModalReceta] = useState(false);
+  const [busqueda, setBusqueda] = useState(''); 
+  const [productoPrincipal, setProductoPrincipal] = useState({
+    descripcion: '',
+    precio: '',
+    stockCritico: '5',
+    codigoBarras: ''
+  });
+  const [listaIngredientes, setListaIngredientes] = useState<IngredienteReceta[]>([]);
+  const [tempInsumoId, setTempInsumoId] = useState('');
+  const [tempCantidad, setTempCantidad] = useState('');
+
+  const stockMaximoPosible = useMemo(() => {
+    if (listaIngredientes.length === 0) return 0;
+    const limites = listaIngredientes.map(ing => {
+      const prod = productos.find(p => p.id === Number(ing.insumoId));
+      return prod ? Math.floor(prod.stock / ing.cantidad) : 0;
     });
-    const [listaIngredientes, setListaIngredientes] = useState<IngredienteReceta[]>([]);
-    const [tempInsumoId, setTempInsumoId] = useState('');
-    const [tempCantidad, setTempCantidad] = useState('');
+    return Math.min(...limites);
+  }, [listaIngredientes, productos]);
 
-    const stockMaximoPosible = useMemo(() => {
-        if (listaIngredientes.length === 0) return 0;
-        const limites = listaIngredientes.map(ing => {
-            const prod = productos.find(p => p.id === Number(ing.insumoId));
-            return prod ? Math.floor(prod.stock / ing.cantidad) : 0;
-        });
-        return Math.min(...limites);
-    }, [listaIngredientes, productos]);
-
-    const agregarIngredienteALista = () => {
-        if (!tempInsumoId || !tempCantidad) return;
-        
-        const insumo = productos.find(p => p.id === Number(tempInsumoId));
-        
-        const nuevoIngrediente: IngredienteReceta = {
-            insumoId: Number(tempInsumoId),
-            nombre: insumo?.descripcion || 'Insumo no registrado',
-            cantidad: Number(tempCantidad)
-        };
-
-        setListaIngredientes([...listaIngredientes, nuevoIngrediente]);
-        setTempInsumoId('');
-        setTempCantidad('');
+  const agregarIngredienteALista = () => {
+    if (!tempInsumoId || !tempCantidad) return;
+    
+    const insumo = productos.find(p => p.id === Number(tempInsumoId));
+    
+    const nuevoIngrediente: IngredienteReceta = {
+      insumoId: Number(tempInsumoId),
+      nombre: insumo?.descripcion || 'Insumo no registrado',
+      cantidad: Number(tempCantidad)
     };
 
-    const handleSubmitFinal = async () => {
-        if (!productoPrincipal.descripcion || listaIngredientes.length === 0) {
-            return Swal.fire('Información Incompleta', 'Debe ingresar el nombre de la formulación y al menos un insumo componente.', 'warning');
-        }
+    setListaIngredientes([...listaIngredientes, nuevoIngrediente]);
+    setTempInsumoId('');
+    setTempCantidad('');
+  };
 
-        const payload = {
-            productoPrincipal: {
-                ...productoPrincipal,
-                precio: Number(productoPrincipal.precio),
-                stockCritico: Number(productoPrincipal.stockCritico),
-                esInsumo: false, 
-                stock: 0 
-            },
-            ingredientes: listaIngredientes.map(ing => ({
-                insumoId: ing.insumoId,
-                cantidad: ing.cantidad
-            }))
-        };
+  const handleSubmitFinal = async () => {
+    if (!productoPrincipal.descripcion || listaIngredientes.length === 0) {
+      return Swal.fire('Información Incompleta', 'Debe ingresar el nombre de la formulación y al menos un insumo componente.', 'warning');
+    }
 
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/productos/con-receta`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                Swal.fire('Registro Completo', 'La formulación del producto y su estructura de insumos han sido registradas en el sistema.', 'success');
-                setShowModalReceta(false);
-                setListaIngredientes([]);
-                setProductoPrincipal({ descripcion: '', precio: '', stockCritico: '5', codigoBarras: '' });
-                cargarProductos(); 
-            }
-        } catch (error) {
-            console.error(error);
-            Swal.fire('Error de Comunicación', 'No fue posible establecer conexión con el servidor principal.', 'error');
-        }
+    // 🟢 CORRECCIÓN 2: Agregamos unidadMedida y activo para evitar que el inventario lo ignore o falle al procesarlo
+    const payload = {
+      productoPrincipal: {
+        ...productoPrincipal,
+        precio: Number(productoPrincipal.precio),
+        stockCritico: Number(productoPrincipal.stockCritico),
+        esInsumo: false, 
+        stock: 0,
+        unidadMedida: 'UN', 
+        activo: true        
+      },
+      ingredientes: listaIngredientes.map(ing => ({
+        insumoId: ing.insumoId,
+        cantidad: ing.cantidad
+      }))
     };
 
-    const recetasFiltradas = recetas.filter(r => 
-        r.productoPadreNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        r.insumoNombre?.toLowerCase().includes(busqueda.toLowerCase())
-    );
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/productos/con-receta`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        Swal.fire('Registro Completo', 'La formulación del producto y su estructura de insumos han sido registradas en el sistema.', 'success');
+        setShowModalReceta(false);
+        setListaIngredientes([]);
+        setProductoPrincipal({ descripcion: '', precio: '', stockCritico: '5', codigoBarras: '' });
+        
+        // 🟢 CORRECCIÓN 3: Actualizamos ambos hooks en memoria inmediatamente
+        if (cargarProductos) cargarProductos(); 
+        if (cargarRecetas) cargarRecetas(); 
+      }
+    } catch (error) {
+      console.error(error);
+      Swal.fire('Error de Comunicación', 'No fue posible establecer conexión con el servidor principal.', 'error');
+    }
+  };
+
+  const recetasFiltradas = recetas.filter(r => 
+    r.productoPadreNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+    r.insumoNombre?.toLowerCase().includes(busqueda.toLowerCase())
+  );
 
     return (
         <div className='min-h-screen bg-slate-50 flex flex-col items-center p-8 font-sans text-slate-800'>
