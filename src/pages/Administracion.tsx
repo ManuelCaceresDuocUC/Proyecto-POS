@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import { apiFetch } from '../helpers/apiFetch'; // ✨ 1. Importamos nuestro helper
 
 interface Metricas {
   ventasHoy: number;
@@ -74,11 +75,12 @@ export const Administracion = () => {
     const cargarDatosPanel = async () => {
       try {
         setCargando(true);
+        // ✨ 2. Uso de apiFetch para leer todas las métricas iniciales del panel
         const [resMetricas, resEmpleados, resNotas, resCategorias] = await Promise.all([
-          fetch(`${API_URL}/admin/metricas?empresaId=${empresaId}`),
-          fetch(`${API_URL}/usuarios?empresaId=${empresaId}`),
-          fetch(`${API_URL}/notas?empresaId=${empresaId}`),
-          fetch(`${API_URL}/categorias?empresaId=${empresaId}`) 
+          apiFetch(`${API_URL}/admin/metricas?empresaId=${empresaId}`),
+          apiFetch(`${API_URL}/usuarios?empresaId=${empresaId}`),
+          apiFetch(`${API_URL}/notas?empresaId=${empresaId}`),
+          apiFetch(`${API_URL}/categorias?empresaId=${empresaId}`) 
         ]);
 
         if (resMetricas.ok) setMetricas(await resMetricas.json());
@@ -100,7 +102,8 @@ export const Administracion = () => {
 
     const cargarMasVendidos = async () => {
       try {
-        const res = await fetch(`${API_URL}/admin/productos-mas-vendidos?periodo=${periodo}&empresaId=${empresaId}`);
+        // ✨ 3. Uso de apiFetch en el filtro de productos más vendidos
+        const res = await apiFetch(`${API_URL}/admin/productos-mas-vendidos?periodo=${periodo}&empresaId=${empresaId}`);
         if (res.ok) {
           setMasVendidos(await res.json());
         }
@@ -116,9 +119,9 @@ export const Administracion = () => {
     e.preventDefault();
     if (!nuevaNota.trim()) return;
     try {
-      const res = await fetch(`${API_URL}/notas`, {
+      // ✨ 4. Uso de apiFetch para registrar notas
+      const res = await apiFetch(`${API_URL}/notas`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           texto: nuevaNota,
           empresa: { id: parseInt(empresaId) } 
@@ -136,7 +139,8 @@ export const Administracion = () => {
 
   const eliminarNota = async (id: number) => {
     try {
-      if ((await fetch(`${API_URL}/notas/${id}`, { method: 'DELETE' })).ok) {
+      // ✨ 5. Uso de apiFetch para borrar notas
+      if ((await apiFetch(`${API_URL}/notas/${id}`, { method: 'DELETE' })).ok) {
         setNotas(notas.filter(n => n.id !== id));
       }
     } catch (error) {
@@ -149,9 +153,9 @@ export const Administracion = () => {
     e.preventDefault();
     if (!nuevaCategoria.trim()) return;
     try {
-      const res = await fetch(`${API_URL}/categorias`, {
+      // ✨ 6. Uso de apiFetch para crear categorías
+      const res = await apiFetch(`${API_URL}/categorias`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           nombre: nuevaCategoria,
           empresa: { id: parseInt(empresaId) }
@@ -177,9 +181,9 @@ export const Administracion = () => {
   const guardarEdicion = async (id: number) => {
     if (!editandoNombre.trim()) return;
     try {
-      const res = await fetch(`${API_URL}/categorias/${id}`, {
+      // ✨ 7. Uso de apiFetch para actualizar categorías
+      const res = await apiFetch(`${API_URL}/categorias/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           nombre: editandoNombre,
           empresa: { id: parseInt(empresaId) }
@@ -213,7 +217,8 @@ export const Administracion = () => {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await fetch(`${API_URL}/categorias/${id}`, { method: 'DELETE' });
+      // ✨ 8. Uso de apiFetch para eliminar categorías
+      const res = await apiFetch(`${API_URL}/categorias/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setCategorias(categorias.filter(cat => cat.id !== id));
         Swal.fire('Confirmación', 'Categoría eliminada del registro.', 'success');
