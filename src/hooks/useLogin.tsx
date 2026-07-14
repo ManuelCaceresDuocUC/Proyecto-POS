@@ -52,7 +52,7 @@ export const useLogin = () => {
             });
 
             if (respuesta.ok) {
-                const usuarioLogeado = await respuesta.json();
+                const { usuario: usuarioLogeado, token } = await respuesta.json(); // Leemos el objeto y el token
                 
                 Swal.fire({
                     title: `¡Bienvenido ${usuarioLogeado.usuario}!`,
@@ -61,10 +61,10 @@ export const useLogin = () => {
                     showConfirmButton: false
                 });
 
-                // Guardado de sesión original
+                // ✨ Guardamos el token criptográfico para usarlo después
+                localStorage.setItem('jwt_token', token);
+
                 localStorage.setItem('user_session', JSON.stringify(usuarioLogeado));
-                
-                // Guardado de datos desglosados
                 const rolUsuario = usuarioLogeado.rol || 'vendedor';
                 localStorage.setItem('usuarioRol', rolUsuario);
                 localStorage.setItem('usuarioNombre', usuarioLogeado.usuario);
@@ -72,16 +72,14 @@ export const useLogin = () => {
                 const idEmpresa = usuarioLogeado.empresa?.id || 1;
                 localStorage.setItem('empresaId', idEmpresa.toString());
 
-                // ✨ CORRECCIÓN: Redirección inteligente según el rol (evita mandarlos al Landing '/')
                 if (rolUsuario === 'administrador' || rolUsuario === 'admin') {
                     navigate('/administracion');
                 } else {
-                    navigate('/pos');
+                    navigate('/home');
                 }
-
-            } else {
-                throw new Error("Credenciales inválidas");
             }
+
+            
         } catch (err) {
             Swal.fire({
                 title: `Error de acceso ${err}`,
