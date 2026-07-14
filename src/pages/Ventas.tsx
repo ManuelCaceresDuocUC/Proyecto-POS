@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useVentas } from '../hooks/useVentas';
 import Swal from 'sweetalert2';
 import { LectorCamara } from '../components/LectorCamara';
+import { apiFetch } from '../helpers/apiFetch'; // ✨ 1. Importación del helper
 
 interface ResumenCaja {
   fondoInicial: number;
@@ -67,7 +68,7 @@ export const Ventas = () => {
     setMetodoPago,
     proveedorTarjeta,    
     setProveedorTarjeta  
-} = useVentas(cargarProductos); 
+  } = useVentas(cargarProductos); 
 
   const totalBruto = totalVenta; 
   const neto = Math.round(totalBruto / 1.19);
@@ -76,7 +77,8 @@ export const Ventas = () => {
   useEffect(() => {
     const verificarEstadoCaja = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/caja/estado?usuarioId=${usuarioId}`);
+        // ✨ 2. Reemplazo por apiFetch al verificar estado de la caja
+        const response = await apiFetch(`${import.meta.env.VITE_API_URL}/caja/estado?usuarioId=${usuarioId}`);
         if (response.ok) {
           const data = await response.json();
           setCajaAbierta(data.abierta); 
@@ -146,9 +148,9 @@ export const Ventas = () => {
     
     setCargandoCaja(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/caja/abrir?usuarioId=${usuarioId}`, {
+      // ✨ 3. Reemplazo por apiFetch al abrir la caja (aquí se originaba tu error 403)
+      const response = await apiFetch(`${import.meta.env.VITE_API_URL}/caja/abrir?usuarioId=${usuarioId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ montoInicial: Number(montoApertura) })
       });
       if (!response.ok) throw new Error(await response.text() || 'Error al procesar la apertura de caja');
@@ -166,7 +168,8 @@ export const Ventas = () => {
     setCargandoCierre(true);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/caja/resumen?usuarioId=${usuarioId}`);
+      // ✨ 4. Reemplazo por apiFetch al obtener el resumen para cerrar caja
+      const response = await apiFetch(`${import.meta.env.VITE_API_URL}/caja/resumen?usuarioId=${usuarioId}`);
       if (!response.ok) throw new Error("No fue posible obtener la información financiera para el cierre");
       
       const data = await response.json();
@@ -188,9 +191,9 @@ export const Ventas = () => {
     if (!montoMovimiento || !motivoMovimiento) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/caja/movimiento?usuarioId=${usuarioId}`, {
+      // ✨ 5. Reemplazo por apiFetch al registrar retiros o ingresos extra
+      const response = await apiFetch(`${import.meta.env.VITE_API_URL}/caja/movimiento?usuarioId=${usuarioId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipo: tipoMovimiento,
           monto: Number(montoMovimiento),
@@ -215,7 +218,8 @@ export const Ventas = () => {
     setCargandoResumen(true);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/caja/resumen?usuarioId=${usuarioId}`);
+      // ✨ 6. Reemplazo por apiFetch al consultar el resumen de caja
+      const response = await apiFetch(`${import.meta.env.VITE_API_URL}/caja/resumen?usuarioId=${usuarioId}`);
       if (response.ok) {
         const data = await response.json();
         setDatosResumen(data);
@@ -302,9 +306,9 @@ export const Ventas = () => {
     setShowModalCierre(false);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/caja/cerrar?usuarioId=${usuarioId}`, {
+      // ✨ 7. Reemplazo por apiFetch al confirmar el cierre final de caja
+      const response = await apiFetch(`${import.meta.env.VITE_API_URL}/caja/cerrar?usuarioId=${usuarioId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fondoInicial: datosCierreCalculados.fondoInicial,
           ventasEfectivo: datosCierreCalculados.ventasEfectivo,
@@ -346,6 +350,8 @@ export const Ventas = () => {
       </div>
     );
   }
+
+  // Resto de tu JSX / Renderizado de interfaz del punto de venta...
 
   if (!cajaAbierta) {
     return (
