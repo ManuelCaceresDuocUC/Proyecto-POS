@@ -97,10 +97,13 @@ export const Recetas = () => {
     }
   };
 
-  const recetasFiltradas = recetas.filter(r => 
-    r.productoPadreNombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-    r.insumoNombre?.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const recetasFiltradas = recetas.filter(r => {
+    const nombreProducto = r.productoPadreNombre || r.productoNombre || r.producto?.descripcion || '';
+    const nombreInsumo = r.insumoNombre || r.insumo?.descripcion || '';
+    
+    return nombreProducto.toLowerCase().includes(busqueda.toLowerCase()) ||
+           nombreInsumo.toLowerCase().includes(busqueda.toLowerCase());
+});
 
     return (
         <div className='min-h-screen bg-slate-50 flex flex-col items-center p-8 font-sans text-slate-800'>
